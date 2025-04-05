@@ -87,3 +87,26 @@ Make navigation obvious and thumb-friendly (bottom tabs, prominent FAB).
 Incorporate interactive feedback (gestures, micro-animations) without cluttering the interface.
 
 Follow Apple’s Human Interface Guidelines so your React Native app feels like a true iOS experience.
+
+1. Layout & Structure
+   Fixed Position: The bottom navigation is pinned to the bottom of the screen, so it’s always visible. This is especially important on iPhone, which typically expects tabs at the bottom.
+
+Four to Five Tabs Max: Keep the number of tabs limited. Too many tabs makes the interface feel cramped. CalAI’s approach of having Home, Analytics, Settings, etc. is a good example.
+
+Icon + Label: Each tab has an icon plus a short text label (e.g., “Home,” “Analytics,” “Settings”). This helps users quickly identify each tab at a glance.
+
+2. Visual Design
+   Consistent Icon Style: Use a consistent icon set or library (e.g., Feather, Ionicons). Ensure icons have a uniform visual weight and size.
+
+Highlight the Active Tab: Use a distinct accent color (and sometimes a slightly larger icon size) to show the currently selected tab. Keep other tabs in a neutral or less prominent color.
+
+Minimal Separation: A thin line or subtle shadow above the tab bar can separate it from screen content. Avoid heavy borders that clutter the design.
+
+Safe Area Respect: Make sure the tab bar sits above or aligns with the iPhone home indicator area. Use SafeAreaView in React Native to avoid elements being hidden behind the notch or home indicator.
+
+3. Interaction & Feedback
+   Tap Feedback: Provide visual feedback on press—e.g., slightly change the icon color or show a ripple (on Android) or highlight effect (on iOS).
+
+Animations: Small transitions when switching tabs can improve the user experience. React Navigation supports transitions that can be customized.
+
+No Hover States: Since this is a mobile interface, you won’t have hover states, but you can use pressed states or micro-interactions (slight scale or color change on tap).
