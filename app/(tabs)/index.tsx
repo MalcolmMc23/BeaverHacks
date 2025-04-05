@@ -1,74 +1,164 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+import React, { useState, useRef } from "react";
+import {
+  StyleSheet,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+} from "react-native";
+import { StatusBar } from "expo-status-bar";
+import { Todo, TodoItem } from "@/components/Todo";
+import { IconSymbol } from "@/components/ui/IconSymbol";
+import { useColorScheme } from "@/hooks/useColorScheme";
+import { Colors } from "@/constants/Colors";
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+export default function TodoScreen() {
+  const colorScheme = useColorScheme();
+  const [todos, setTodos] = useState<TodoItem[]>([
+    { id: "1", text: "Complete homework", completed: false },
+    { id: "2", text: "Go for a run", completed: true },
+    { id: "3", text: "Buy groceries", completed: false },
+  ]);
+  const [text, setText] = useState("");
+  const inputRef = useRef<TextInput>(null);
 
-export default function HomeScreen() {
+  const handleAddTodo = () => {
+    if (text.trim()) {
+      const newTodo: TodoItem = {
+        id: Date.now().toString(),
+        text: text.trim(),
+        completed: false,
+      };
+      setTodos([...todos, newTodo]);
+      setText("");
+    }
+  };
+
+  const handleToggleTodo = (id: string) => {
+    setTodos(
+      todos.map((todo) =>
+        todo.id === id ? { ...todo, completed: !todo.completed } : todo
+      )
+    );
+  };
+
+  const handleDeleteTodo = (id: string) => {
+    setTodos(todos.filter((todo) => todo.id !== id));
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
+    <SafeAreaView
+      style={[
+        styles.container,
+        { backgroundColor: Colors[colorScheme ?? "light"].background },
+      ]}
+    >
+      <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
+
+      <View style={styles.header}>
+        <Text
+          style={[styles.title, { color: Colors[colorScheme ?? "light"].text }]}
+        >
+          Todo List
+        </Text>
+        <Text style={styles.subtitle}>
+          {todos.filter((t) => !t.completed).length} tasks remaining
+        </Text>
+      </View>
+
+      <FlatList
+        style={styles.list}
+        data={todos}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <Todo
+            item={item}
+            onToggle={handleToggleTodo}
+            onDelete={handleDeleteTodo}
+            colorScheme={colorScheme}
+          />
+        )}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.listContent}
+      />
+
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={100}
+        style={[styles.inputContainer, { backgroundColor: "white" }]}
+      >
+        <TextInput
+          ref={inputRef}
+          style={[styles.input, { backgroundColor: seaMistLight }]}
+          placeholder="Add a new task..."
+          value={text}
+          onChangeText={setText}
+          onSubmitEditing={handleAddTodo}
+          returnKeyType="done"
         />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12'
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+        <TouchableOpacity
+          style={[
+            styles.addButton,
+            { backgroundColor: Colors[colorScheme ?? "light"].tint },
+          ]}
+          onPress={handleAddTodo}
+        >
+          <IconSymbol name="plus" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
+const seaMistLight = "#EDF3F1"; // Lighter version of Sea Mist for input background
+
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    flex: 1,
   },
-  stepContainer: {
-    gap: 8,
+  header: {
+    padding: 20,
+    paddingTop: 60,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: "bold",
     marginBottom: 8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  subtitle: {
+    fontSize: 16,
+    color: "#687076",
+  },
+  list: {
+    flex: 1,
+  },
+  listContent: {
+    padding: 20,
+    paddingTop: 10,
+  },
+  inputContainer: {
+    flexDirection: "row",
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#E0E0E0",
+  },
+  input: {
+    flex: 1,
+    height: 48,
+    paddingHorizontal: 16,
+    borderRadius: 24,
+    marginRight: 12,
+    fontSize: 16,
+  },
+  addButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
