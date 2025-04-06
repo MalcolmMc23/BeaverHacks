@@ -11,33 +11,43 @@ import { router } from 'expo-router';
 
 type ColorSchemeType = "light" | "dark";
 
+const FORCE_REFRESH_KEY = 'forceRefreshTimestamp';
+
 export default function SettingsScreen() {
   const colorScheme = useColorScheme();
   const theme = (colorScheme ?? "light") as ColorSchemeType;
   const [showLockedAppsModal, setShowLockedAppsModal] = useState(false);
 
-  const handleRedoOnboarding = async () => {
-    try {
-      Alert.alert(
-        "Restart Onboarding",
-        "This will restart the app to show the onboarding screens. Continue?",
-        [
-          {
-            text: "Cancel",
-            style: "cancel"
-          },
-          {
-            text: "Continue",
-            onPress: async () => {
-              await AsyncStorage.multiRemove(['hasCompletedOnboarding', 'onboardingTimestamp']);
+  const handleRedoOnboarding = () => {
+    Alert.alert(
+      "Restart Onboarding",
+      "This will restart the app to show the onboarding screens. Continue?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "Continue",
+          onPress: async () => {
+            try {
+              // Clear all onboarding data and set force refresh timestamp
+              await AsyncStorage.multiSet([
+                ['hasCompletedOnboarding', 'false'],
+                ['onboardingTimestamp', ''],
+                [FORCE_REFRESH_KEY, new Date().toISOString()]
+              ]);
+              
+              // Navigate to root
               router.replace('/');
+            } catch (error) {
+              console.error("Error resetting onboarding:", error);
+              Alert.alert("Error", "Failed to restart onboarding. Please try again.");
             }
           }
-        ]
-      );
-    } catch (error) {
-      console.error("Error resetting onboarding:", error);
-    }
+        }
+      ]
+    );
   };
 
   return (

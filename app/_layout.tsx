@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
-import { useColorScheme, Animated } from 'react-native';
+import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
@@ -11,53 +11,54 @@ import { Onboarding } from '@/components/Onboarding';
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
 
+// Key for forcing a refresh
+const FORCE_REFRESH_KEY = 'forceRefreshTimestamp';
+
 export default function RootLayout() {
   const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null);
-  const [fadeAnim] = useState(new Animated.Value(1));
+  const [refreshKey, setRefreshKey] = useState<string>('');
   const colorScheme = useColorScheme();
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
 
-  useEffect(() => {
-    initializeApp();
-  }, []);
-
-  // Add a function to reset fade animation
-  const resetFadeAnimation = () => {
-    fadeAnim.setValue(1);
-  };
-
-  const initializeApp = async () => {
+  const checkOnboardingStatus = async () => {
     try {
-      resetFadeAnimation(); // Reset fade animation when initializing
-      const hasCompletedOnboarding = await AsyncStorage.getItem('hasCompletedOnboarding');
-      setShowOnboarding(hasCompletedOnboarding !== 'true');
+      const [hasCompletedOnboarding, forceRefresh] = await AsyncStorage.multiGet([
+        'hasCompletedOnboarding',
+        FORCE_REFRESH_KEY
+      ]);
       
-      if (loaded) {
-        await SplashScreen.hideAsync();
-      }
+      // Update refresh key to force re-render when needed
+      setRefreshKey(forceRefresh[1] || '');
+      
+      const shouldShowOnboarding = hasCompletedOnboarding[1] !== 'true';
+      setShowOnboarding(shouldShowOnboarding);
+      return shouldShowOnboarding;
     } catch (error) {
-      console.error('Error initializing app:', error);
+      console.error('Error checking onboarding status:', error);
       setShowOnboarding(true);
+      return true;
     }
   };
 
+  useEffect(() => {
+    const initialize = async () => {
+      if (loaded) {
+        await checkOnboardingStatus();
+      }
+    };
+    initialize();
+  }, [loaded, refreshKey]); // Add refreshKey to dependencies
+
   const handleOnboardingComplete = async () => {
     try {
-      // Start fade out animation
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 500,
-        useNativeDriver: true,
-      }).start(async () => {
-        // After fade out completes, update the state
-        await AsyncStorage.multiSet([
-          ['hasCompletedOnboarding', 'true'],
-          ['onboardingTimestamp', new Date().toISOString()],
-        ]);
-        setShowOnboarding(false);
-      });
+      await AsyncStorage.multiSet([
+        ['hasCompletedOnboarding', 'true'],
+        ['onboardingTimestamp', new Date().toISOString()],
+      ]);
+      setShowOnboarding(false);
+      await SplashScreen.hideAsync();
     } catch (error) {
       console.error('Error saving onboarding status:', error);
     }
@@ -68,31 +69,12 @@ export default function RootLayout() {
   }
 
   if (showOnboarding) {
-    return (
-      <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
-        <Onboarding onComplete={handleOnboardingComplete} />
-      </Animated.View>
-    );
+    return <Onboarding onComplete={handleOnboardingComplete} />;
   }
 
   return (
-    <Stack
-      screenOptions={{
-        headerStyle: {
-          backgroundColor: Colors[colorScheme ?? 'light'].background,
-        },
-        headerTintColor: Colors[colorScheme ?? 'light'].text,
-        headerTitleStyle: {
-          fontWeight: 'bold',
-        },
-      }}
-    >
-      <Stack.Screen
-        name="(tabs)"
-        options={{
-          headerShown: false,
-        }}
-      />
+    <Stack>
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
     </Stack>
   );
 }

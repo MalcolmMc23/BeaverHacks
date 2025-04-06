@@ -656,18 +656,10 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 16,
     backgroundColor: Colors.light.tint,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
   },
   navigationButtonDisabled: {
-    backgroundColor: '#E1E1E1',
-    opacity: 0.5,
+    backgroundColor: '#F5F5F5',
+    opacity: 1,
   },
   navigationButtonText: {
     color: '#FFFFFF',
@@ -676,7 +668,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   navigationButtonTextDisabled: {
-    color: '#E1E1E1',
+    color: '#999999',
   },
   backButton: {
     backgroundColor: '#C4753F', // Lighter shade of brown
