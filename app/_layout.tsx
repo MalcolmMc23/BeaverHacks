@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import { Stack } from "expo-router";
-import { useColorScheme, Text, View, Platform, TouchableOpacity } from "react-native";
+import {
+  useColorScheme,
+  Text,
+  View,
+  Platform,
+  TouchableOpacity,
+} from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
@@ -137,24 +143,24 @@ export default function RootLayout() {
   return (
     <ErrorBoundary>
       <Stack>
-        <Stack.Screen 
-          name="(tabs)" 
-          options={{ 
+        <Stack.Screen
+          name="(tabs)"
+          options={{
             headerShown: false,
             headerRight: () => (
               <TouchableOpacity
                 onPress={async () => {
-                  await AsyncStorage.removeItem('hasCompletedOnboarding');
+                  await AsyncStorage.removeItem("hasCompletedOnboarding");
                   setShowOnboarding(true);
                 }}
                 style={{ marginRight: 15 }}
               >
-                <Text style={{ color: Colors[colorScheme ?? 'light'].text }}>
+                <Text style={{ color: Colors[colorScheme ?? "light"].text }}>
                   Reset Onboarding
                 </Text>
               </TouchableOpacity>
             ),
-          }} 
+          }}
         />
       </Stack>
     </ErrorBoundary>
