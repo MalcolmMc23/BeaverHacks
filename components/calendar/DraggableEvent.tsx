@@ -39,33 +39,63 @@ const DraggableEvent: React.FC<DraggableEventProps> = ({
   const originalTop = useRef(position.top);
   const lastTouch = useRef({ x: 0, y: 0 });
   const hasActivatedDrag = useRef(false);
+  const longPressTimeout = useRef<NodeJS.Timeout | null>(null);
 
   // Set up pan responder for drag events with improved event capturing
   const panResponder = useRef(
     PanResponder.create({
-      // Always capture initial touches on the event
+      // Ensure we always capture initial touches on events with high priority
       onStartShouldSetPanResponder: () => true,
       onStartShouldSetPanResponderCapture: () => true,
-      // Always capture moves on the event
+      // Always capture moves on the event with high priority
       onMoveShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponderCapture: () => true,
       onPanResponderGrant: (event: GestureResponderEvent) => {
-        // Immediately call onDragStart to prevent scrolling
+        // Stop event propagation
+        event.stopPropagation?.();
+
+        // Immediately disable scrolling and signal drag operation is starting
         onDragStart();
 
         // Store initial position
         const { locationX, locationY } = event.nativeEvent;
         lastTouch.current = { x: locationX, y: locationY };
         originalTop.current = position.top;
-        hasActivatedDrag.current = false;
+
+        // Clear any existing timeout
+        if (longPressTimeout.current) {
+          clearTimeout(longPressTimeout.current);
+        }
+
+        // Set a timeout to trigger haptic feedback and visually indicate dragging
+        longPressTimeout.current = setTimeout(() => {
+          setIsDragging(true);
+          hasActivatedDrag.current = true;
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          longPressTimeout.current = null;
+        }, 100); // Short delay for better UX
       },
       onPanResponderMove: (event: GestureResponderEvent, gestureState) => {
+        // Stop event propagation
+        event.stopPropagation?.();
+
         const { dx, dy } = gestureState;
 
         // Only consider it dragging if there's significant movement
         if (!isDragging && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
+          // If we've moved significantly, activate drag mode immediately
           setIsDragging(true);
           hasActivatedDrag.current = true;
+
+          // Clear the timeout if it still exists
+          if (longPressTimeout.current) {
+            clearTimeout(longPressTimeout.current);
+            longPressTimeout.current = null;
+          }
+
+          // Ensure parent knows we're dragging to prevent new event creation
+          onDragStart();
+
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         }
 
@@ -78,7 +108,16 @@ const DraggableEvent: React.FC<DraggableEventProps> = ({
           setEventTop(Math.max(0, snappedTop));
         }
       },
-      onPanResponderRelease: () => {
+      onPanResponderRelease: (e: GestureResponderEvent) => {
+        // Stop event propagation
+        e.stopPropagation?.();
+
+        // Clear timeout if it exists
+        if (longPressTimeout.current) {
+          clearTimeout(longPressTimeout.current);
+          longPressTimeout.current = null;
+        }
+
         if (isDragging || hasActivatedDrag.current) {
           // Calculate new times based on position
           const newStart = getTimeFromPosition(eventTop);
@@ -93,9 +132,20 @@ const DraggableEvent: React.FC<DraggableEventProps> = ({
         } else {
           // If not dragging, treat as a normal press
           onEventPress(event, index);
+          // Make sure to re-enable scrolling
+          onDragEnd(index, event.start, event.end);
         }
       },
-      onPanResponderTerminate: () => {
+      onPanResponderTerminate: (e: GestureResponderEvent) => {
+        // Stop event propagation
+        e.stopPropagation?.();
+
+        // Clear timeout if it exists
+        if (longPressTimeout.current) {
+          clearTimeout(longPressTimeout.current);
+          longPressTimeout.current = null;
+        }
+
         // Reset if interrupted
         setIsDragging(false);
         hasActivatedDrag.current = false;
@@ -116,14 +166,34 @@ const DraggableEvent: React.FC<DraggableEventProps> = ({
     }
   }, [position.top, isDragging]);
 
+  // Clean up timeouts on unmount
+  React.useEffect(() => {
+    return () => {
+      if (longPressTimeout.current) {
+        clearTimeout(longPressTimeout.current);
+      }
+    };
+  }, []);
+
   // Calculate the time label based on current position
   const getTimeLabel = () => {
-    if (isDragging) {
-      const newStart = getTimeFromPosition(eventTop);
-      const newEnd = new Date(newStart.getTime() + eventDuration);
-      return `${formatTime(newStart)} - ${formatTime(newEnd)}`;
+    // Always show the updated time based on current position
+    // This will make the time update in real-time during dragging
+    const currentPos = isDragging ? eventTop : position.top;
+    const newStart = getTimeFromPosition(currentPos);
+    const newEnd = new Date(newStart.getTime() + eventDuration);
+    return `${formatTime(newStart)} - ${formatTime(newEnd)}`;
+  };
+
+  // Handle event press without letting event propagate to parent components
+  const handleEventPress = (e: GestureResponderEvent) => {
+    // Explicitly stop propagation
+    e.stopPropagation?.();
+
+    // Don't let the press event bubble up to parent time slots
+    if (!isDragging && !hasActivatedDrag.current) {
+      onEventPress(event, index);
     }
-    return `${formatTime(event.start)} - ${formatTime(event.end)}`;
   };
 
   return (
@@ -137,9 +207,19 @@ const DraggableEvent: React.FC<DraggableEventProps> = ({
           opacity: isDragging ? 0.7 : 1,
           zIndex: isDragging ? 1000 : 100,
           elevation: isDragging ? 5 : 2,
+          // Add a shadow or border when dragging for better visual feedback
+          ...(isDragging && {
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 4,
+            borderWidth: 2,
+            borderColor: "#fff",
+          }),
         },
       ]}
       activeOpacity={0.9}
+      onPress={handleEventPress}
       {...panResponder.panHandlers}
     >
       <Text style={styles.eventTitle} numberOfLines={1}>

@@ -96,6 +96,15 @@ interface Styles {
   buttonText: TextStyle;
 }
 
+// Update the onInitiateEventCreation interface to handle drag events
+interface EventCreationData {
+  startDate: Date;
+  endDate: Date;
+  color: string;
+  fromDrag?: boolean;
+  draggedEventIndex?: number;
+}
+
 export default function CalendarScreen() {
   // Always use light mode
   const colorScheme = "light";
@@ -210,6 +219,40 @@ export default function CalendarScreen() {
 
     setModalVisible(false);
     setInitialEventData(null);
+  };
+
+  // Handle event updates from dragging or editing
+  const handleUpdateEvent = (data: {
+    startDate: Date;
+    endDate: Date;
+    color?: string;
+  }) => {
+    // Check if we have an existing event that's being edited
+    if (selectedEventIndex !== -1 && selectedEvent) {
+      // Update existing event
+      const updatedEvent = {
+        ...selectedEvent,
+        start: data.startDate,
+        end: data.endDate,
+        color: data.color || selectedEvent.color,
+      };
+
+      setEvents((prevEvents) => {
+        const dateEvents = [...(prevEvents[selectedDate] || [])];
+        dateEvents[selectedEventIndex] = updatedEvent;
+        return {
+          ...prevEvents,
+          [selectedDate]: dateEvents,
+        };
+      });
+
+      setSelectedEvent(null);
+      setSelectedEventIndex(-1);
+    } else {
+      // This is from drag-and-drop creation or direct modification
+      // The specific handling will occur in the respective handlers
+      // (handleAddEvent or handleEditEvent)
+    }
   };
 
   const handleEditEvent = (eventData: {
@@ -673,9 +716,42 @@ export default function CalendarScreen() {
             isDark={isDark}
             onEventPress={handleEventPress}
             onTimeSlotPress={handleTimeSlotPress}
-            onInitiateEventCreation={(data) => {
-              setInitialEventData(data);
-              setModalVisible(true);
+            onInitiateEventCreation={(data: EventCreationData) => {
+              // If we have an existing selected event, update it instead of creating a new one
+              if (selectedEventIndex !== -1 && selectedEvent) {
+                handleUpdateEvent(data);
+              } else if (
+                data.fromDrag === true &&
+                data.draggedEventIndex !== undefined
+              ) {
+                // This is from dragging an existing event
+                const updatedEvents = [...(events[selectedDate] || [])];
+                const eventToUpdate = updatedEvents[data.draggedEventIndex];
+
+                if (eventToUpdate) {
+                  // Update the event with new times
+                  updatedEvents[data.draggedEventIndex] = {
+                    ...eventToUpdate,
+                    start: data.startDate,
+                    end: data.endDate,
+                  };
+
+                  // Update events state
+                  setEvents((prevEvents) => ({
+                    ...prevEvents,
+                    [selectedDate]: updatedEvents,
+                  }));
+
+                  // Provide haptic feedback
+                  Haptics.notificationAsync(
+                    Haptics.NotificationFeedbackType.Success
+                  );
+                }
+              } else {
+                // Regular event creation
+                setInitialEventData(data);
+                setModalVisible(true);
+              }
             }}
           />
         </View>
