@@ -20,11 +20,13 @@ import { IconSymbol } from "@/components/ui/IconSymbol";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { Colors } from "@/constants/Colors";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
 
 export default function TodoScreen() {
   const colorScheme = useColorScheme();
   const theme = (useColorScheme() ?? "light") as "light" | "dark";
   const [todos, setTodos] = useState<TodoItem[]>([]);
+  const router = useRouter();
 
   // Load todos from AsyncStorage on component mount
   useEffect(() => {
@@ -686,6 +688,13 @@ export default function TodoScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      <TouchableOpacity
+        style={[styles.chatFab, { backgroundColor: '#8B4513' }]}
+        onPress={() => router.push('/chat')}
+      >
+        <IconSymbol name="mic" size={24} color="#FFFFFF" />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -965,5 +974,22 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
+  },
+  chatFab: {
+    position: 'absolute',
+    right: 20,
+    bottom: 90, // Positioned above the tab bar
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#8B4513',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    zIndex: 1,
   },
 });
