@@ -19,32 +19,74 @@ import { Todo, TodoItem } from "@/components/Todo";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { Colors } from "@/constants/Colors";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function TodoScreen() {
   const colorScheme = useColorScheme();
-  const [todos, setTodos] = useState<TodoItem[]>([
-    {
-      id: "1",
-      text: "Complete homework",
-      completed: false,
-      description: "Math assignment due tomorrow",
-      startDate: new Date(Date.now() + 3600000), // 1 hour from now
-      endDate: new Date(Date.now() + 86400000), // 24 hours from now
-    },
-    {
-      id: "2",
-      text: "Go for a run",
-      completed: true,
-      startDate: new Date(Date.now() - 7200000), // 2 hours ago
-      endDate: new Date(Date.now() - 3600000), // 1 hour ago
-    },
-    {
-      id: "3",
-      text: "Buy groceries",
-      completed: false,
-      description: "Milk, eggs, bread",
-    },
-  ]);
+  const [todos, setTodos] = useState<TodoItem[]>([]);
+
+  // Load todos from AsyncStorage on component mount
+  useEffect(() => {
+    const loadTodos = async () => {
+      try {
+        const storedTodos = await AsyncStorage.getItem("todos");
+        if (storedTodos) {
+          const parsedTodos = JSON.parse(storedTodos);
+          // Convert date strings back to Date objects
+          const todosWithDates = parsedTodos.map((todo: any) => ({
+            ...todo,
+            startDate: todo.startDate ? new Date(todo.startDate) : undefined,
+            endDate: todo.endDate ? new Date(todo.endDate) : undefined,
+          }));
+          setTodos(todosWithDates);
+        } else {
+          // Default sample todos only if no stored todos exist
+          setTodos([
+            {
+              id: "1",
+              text: "Complete homework",
+              completed: false,
+              description: "Math assignment due tomorrow",
+              startDate: new Date(Date.now() + 3600000), // 1 hour from now
+              endDate: new Date(Date.now() + 86400000), // 24 hours from now
+            },
+            {
+              id: "2",
+              text: "Go for a run",
+              completed: true,
+              startDate: new Date(Date.now() - 7200000), // 2 hours ago
+              endDate: new Date(Date.now() - 3600000), // 1 hour ago
+            },
+            {
+              id: "3",
+              text: "Buy groceries",
+              completed: false,
+              description: "Milk, eggs, bread",
+            },
+          ]);
+        }
+      } catch (error) {
+        console.error("Error loading todos:", error);
+      }
+    };
+
+    loadTodos();
+  }, []);
+
+  // Save todos to AsyncStorage whenever they change
+  useEffect(() => {
+    const saveTodos = async () => {
+      try {
+        await AsyncStorage.setItem("todos", JSON.stringify(todos));
+      } catch (error) {
+        console.error("Error saving todos:", error);
+      }
+    };
+
+    if (todos.length > 0) {
+      saveTodos();
+    }
+  }, [todos]);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [editingTodo, setEditingTodo] = useState<TodoItem | null>(null);
