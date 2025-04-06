@@ -15,6 +15,7 @@ import { Calendar, DateData } from "react-native-calendars";
 import { useState, useRef } from "react";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { AddEventModal } from "@/components/AddEventModal";
 
 // Move these constants to top level
 const burntCopper = "#A0430A"; // Primary accent color from constants
@@ -25,7 +26,12 @@ interface CalendarEvent {
   title: string;
   start: Date;
   end: Date;
+  location?: string;
+  description?: string;
   color?: string;
+  isAllDay?: boolean;
+  alert?: string;
+  showAs?: string;
 }
 
 interface EventsState {
@@ -94,11 +100,6 @@ export default function CalendarScreen() {
   );
   const [events, setEvents] = useState<EventsState>({});
   const [modalVisible, setModalVisible] = useState(false);
-  const [eventTitle, setEventTitle] = useState("");
-  const [startTime, setStartTime] = useState(new Date());
-  const [endTime, setEndTime] = useState(
-    new Date(new Date().setHours(new Date().getHours() + 1))
-  );
   const [markedDates, setMarkedDates] = useState<MarkedDatesState>({});
   const scrollViewRef = useRef<ScrollView>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("day"); // Default to day view like in the screenshot
@@ -126,17 +127,26 @@ export default function CalendarScreen() {
     }, 100);
   };
 
-  const addEvent = () => {
-    if (eventTitle.trim() === "") {
-      Alert.alert("Error", "Please enter an event title");
-      return;
-    }
-
+  const handleAddEvent = (eventData: {
+    title: string;
+    location: string;
+    isAllDay: boolean;
+    startDate: Date;
+    endDate: Date;
+    description?: string;
+    alert?: string;
+    showAs?: string;
+  }) => {
     const newEvent: CalendarEvent = {
-      title: eventTitle,
-      start: startTime,
-      end: endTime,
+      title: eventData.title,
+      start: eventData.startDate,
+      end: eventData.endDate,
+      location: eventData.location,
+      description: eventData.description,
       color: getRandomColor(),
+      isAllDay: eventData.isAllDay,
+      alert: eventData.alert,
+      showAs: eventData.showAs,
     };
 
     // Add new event to the events state
@@ -156,7 +166,6 @@ export default function CalendarScreen() {
     }));
 
     setModalVisible(false);
-    setEventTitle("");
   };
 
   // Format time for display
@@ -518,85 +527,10 @@ export default function CalendarScreen() {
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
       >
-        <View style={styles.modalContainer}>
-          <View
-            style={[
-              styles.modalContent,
-              { backgroundColor: Colors["light"].background },
-            ]}
-          >
-            <Text style={[styles.modalTitle, { color: Colors["light"].text }]}>
-              Add New Event
-            </Text>
-
-            <TextInput
-              style={[
-                styles.input,
-                {
-                  color: Colors["light"].text,
-                  borderColor: "#ddd",
-                },
-              ]}
-              placeholder="Event Title"
-              placeholderTextColor={Colors["light"].icon}
-              value={eventTitle}
-              onChangeText={setEventTitle}
-            />
-
-            <Text style={[styles.timeLabel, { color: Colors["light"].text }]}>
-              Start Time:
-            </Text>
-            <DateTimePicker
-              value={startTime}
-              mode="time"
-              display="spinner"
-              onChange={(event, selectedDate) => {
-                if (selectedDate) {
-                  setStartTime(selectedDate);
-
-                  // If end time is before new start time, adjust it
-                  if (endTime < selectedDate) {
-                    const newEndTime = new Date(selectedDate);
-                    newEndTime.setHours(newEndTime.getHours() + 1);
-                    setEndTime(newEndTime);
-                  }
-                }
-              }}
-              textColor={Colors["light"].text}
-            />
-
-            <Text style={[styles.timeLabel, { color: Colors["light"].text }]}>
-              End Time:
-            </Text>
-            <DateTimePicker
-              value={endTime}
-              mode="time"
-              display="spinner"
-              onChange={(event, selectedDate) => {
-                if (selectedDate) {
-                  setEndTime(selectedDate);
-                }
-              }}
-              textColor={Colors["light"].text}
-              minimumDate={startTime}
-            />
-
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.button, styles.cancelButton]}
-                onPress={() => setModalVisible(false)}
-              >
-                <Text style={styles.buttonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.button, styles.submitButton]}
-                onPress={addEvent}
-              >
-                <Text style={styles.buttonText}>Add Event</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+        <AddEventModal
+          onCancel={() => setModalVisible(false)}
+          onAdd={handleAddEvent}
+        />
       </Modal>
     </SafeAreaView>
   );
