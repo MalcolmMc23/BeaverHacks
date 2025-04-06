@@ -60,6 +60,123 @@ const EVENT_COLORS = [
 const getRandomColor = () =>
   EVENT_COLORS[Math.floor(Math.random() * EVENT_COLORS.length)];
 
+// Generate today's and tomorrow's date strings in YYYY-MM-DD format
+const getTodayString = () => new Date().toISOString().split("T")[0];
+const getTomorrowString = () => {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return tomorrow.toISOString().split("T")[0];
+};
+
+// Create placeholder events
+const createPlaceholderEvents = () => {
+  const today = getTodayString();
+  const tomorrow = getTomorrowString();
+
+  // Helper to create date object for specific time
+  const createEventTime = (dateStr: string, hours: number, minutes: number) => {
+    const date = new Date(dateStr);
+    date.setHours(hours, minutes, 0, 0);
+    return date;
+  };
+
+  const placeholderEvents: EventsState = {
+    [today]: [
+      {
+        title: "Morning Coffee",
+        start: createEventTime(today, 8, 0),
+        end: createEventTime(today, 8, 30),
+        location: "Starbucks",
+        color: EVENT_COLORS[0],
+        isAllDay: false,
+        showAs: "Busy",
+      },
+      {
+        title: "Team Meeting",
+        start: createEventTime(today, 9, 30),
+        end: createEventTime(today, 10, 30),
+        location: "Conference Room B",
+        description: "Weekly sprint planning",
+        color: EVENT_COLORS[1],
+        isAllDay: false,
+        showAs: "Busy",
+      },
+      {
+        title: "Lunch with Alex",
+        start: createEventTime(today, 12, 0),
+        end: createEventTime(today, 13, 0),
+        location: "Cafe Deluxe",
+        color: EVENT_COLORS[2],
+        isAllDay: false,
+        showAs: "Busy",
+      },
+      {
+        title: "Dentist Appointment",
+        start: createEventTime(today, 15, 0),
+        end: createEventTime(today, 16, 0),
+        location: "Bright Smile Dental",
+        color: EVENT_COLORS[3],
+        isAllDay: false,
+        alert: "30 minutes before",
+        showAs: "Busy",
+      },
+      {
+        title: "Gym",
+        start: createEventTime(today, 18, 0),
+        end: createEventTime(today, 19, 0),
+        location: "Fitness Center",
+        color: EVENT_COLORS[4],
+        isAllDay: false,
+        showAs: "Busy",
+      },
+    ],
+    [tomorrow]: [
+      {
+        title: "Project Deadline",
+        start: createEventTime(tomorrow, 9, 0),
+        end: createEventTime(tomorrow, 11, 0),
+        description: "Submit final project deliverables",
+        color: EVENT_COLORS[5],
+        isAllDay: false,
+        alert: "1 day before",
+        showAs: "Busy",
+      },
+      {
+        title: "Client Call",
+        start: createEventTime(tomorrow, 13, 30),
+        end: createEventTime(tomorrow, 14, 30),
+        location: "Zoom Meeting",
+        description: "Discuss project requirements",
+        color: EVENT_COLORS[0],
+        isAllDay: false,
+        showAs: "Busy",
+      },
+      {
+        title: "Coffee with Jordan",
+        start: createEventTime(tomorrow, 15, 30),
+        end: createEventTime(tomorrow, 16, 30),
+        location: "Java House",
+        color: EVENT_COLORS[2],
+        isAllDay: false,
+        showAs: "Busy",
+      },
+      {
+        title: "Evening Class",
+        start: createEventTime(tomorrow, 18, 0),
+        end: createEventTime(tomorrow, 20, 0),
+        location: "Community College",
+        description: "Advanced programming techniques",
+        color: EVENT_COLORS[1],
+        isAllDay: false,
+        alert: "1 hour before",
+        showAs: "Busy",
+      },
+    ],
+  };
+
+  return placeholderEvents;
+};
+
 type ViewMode = "day" | "month";
 
 interface Styles {
@@ -100,9 +217,10 @@ interface Styles {
 interface EventCreationData {
   startDate: Date;
   endDate: Date;
-  color: string;
+  color?: string | null;
   fromDrag?: boolean;
   draggedEventIndex?: number;
+  importance?: "low" | "medium" | "high" | "urgent";
 }
 
 export default function CalendarScreen() {
@@ -112,14 +230,41 @@ export default function CalendarScreen() {
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().split("T")[0]
   );
-  const [events, setEvents] = useState<EventsState>({});
+  const [events, setEvents] = useState<EventsState>(createPlaceholderEvents());
+
+  // Generate marked dates based on initial events
+  const generateInitialMarkedDates = () => {
+    const initialMarkedDates: MarkedDatesState = {};
+
+    // Mark the selected date
+    initialMarkedDates[selectedDate] = {
+      selected: true,
+      selectedColor: "#FF3B30",
+    };
+
+    // Mark dates that have events with dots
+    Object.keys(events).forEach((date) => {
+      if (events[date]?.length > 0) {
+        initialMarkedDates[date] = {
+          ...initialMarkedDates[date],
+          marked: true,
+          dots: [{ color: "#FF3B30" }],
+        };
+      }
+    });
+
+    return initialMarkedDates;
+  };
+
   const [modalVisible, setModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(
     null
   );
   const [selectedEventIndex, setSelectedEventIndex] = useState<number>(-1);
-  const [markedDates, setMarkedDates] = useState<MarkedDatesState>({});
+  const [markedDates, setMarkedDates] = useState<MarkedDatesState>(
+    generateInitialMarkedDates()
+  );
   const scrollViewRef = useRef<ScrollView>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("day"); // Default to day view like in the screenshot
   const [initialEventData, setInitialEventData] = useState<any>(null);
@@ -226,7 +371,7 @@ export default function CalendarScreen() {
   const handleUpdateEvent = (data: {
     startDate: Date;
     endDate: Date;
-    color?: string;
+    color?: string | null;
   }) => {
     // Check if we have an existing event that's being edited
     if (selectedEventIndex !== -1 && selectedEvent) {
