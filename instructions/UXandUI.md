@@ -110,3 +110,7 @@ Safe Area Respect: Make sure the tab bar sits above or aligns with the iPhone ho
 Animations: Small transitions when switching tabs can improve the user experience. React Navigation supports transitions that can be customized.
 
 No Hover States: Since this is a mobile interface, you won’t have hover states, but you can use pressed states or micro-interactions (slight scale or color change on tap).
+
+Main Brand Colors:
+burntCopper: '#A0430A' (Primary accent color - a rich reddish-brown)
+seaMist: '#DFE8E6' (Secondary/background color - a light grayish-teal)
