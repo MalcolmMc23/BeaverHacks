@@ -13,6 +13,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Text, View } from "react-native";
 import { Colors } from "@/constants/Colors";
 import * as Haptics from "expo-haptics";
+import CurrentTimeIndicator from "./CurrentTimeIndicator";
 
 // Constants
 const burntCopper = "#A0430A"; // Primary accent color from constants
@@ -113,6 +114,20 @@ export const DayView: React.FC<DayViewProps> = ({
     null
   );
   const LONG_PRESS_DURATION = 1200; // 1.2 seconds to trigger event creation modal
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Update current time every minute
+  useEffect(() => {
+    // Set initial time
+    setCurrentTime(new Date());
+
+    // Update time every minute
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000); // 60 seconds
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Format time for display
   const formatTime = (date: Date) => {
@@ -170,14 +185,32 @@ export const DayView: React.FC<DayViewProps> = ({
     }
   );
 
-  // Scroll to 8 AM when the component mounts or selected date changes
+  // Check if selected date is today
+  const isToday = selectedDate === new Date().toISOString().split("T")[0];
+
+  // Scroll to appropriate time when the component mounts or selected date changes
   useEffect(() => {
     setTimeout(() => {
       if (scrollViewRef.current) {
-        scrollViewRef.current.scrollTo({ y: 8 * 60, animated: false });
+        if (isToday) {
+          // If today, scroll to current hour minus 1 for context
+          const currentHour = new Date().getHours();
+          const scrollPosition = Math.max(0, (currentHour - 1) * 60);
+          scrollViewRef.current.scrollTo({
+            y: scrollPosition,
+            animated: false,
+          });
+        } else {
+          // Otherwise scroll to 8 AM
+          scrollViewRef.current.scrollTo({ y: 8 * 60, animated: false });
+        }
       }
     }, 100);
-  }, [selectedDate]);
+  }, [selectedDate, isToday]);
+
+  // Calculate current time position
+  const currentTimePosition =
+    currentTime.getHours() * 60 + currentTime.getMinutes();
 
   // Pan responder for creating events with long press and drag
   const panResponder = useRef(
@@ -359,30 +392,12 @@ export const DayView: React.FC<DayViewProps> = ({
             );
           })}
 
-          {/* Current time indicator */}
-          {selectedDate === new Date().toISOString().split("T")[0] && (
-            <View
-              style={[
-                styles.currentTimeIndicator,
-                {
-                  top: new Date().getHours() * 60 + new Date().getMinutes(),
-                },
-              ]}
-            >
-              <View
-                style={[
-                  styles.currentTimeDot,
-                  { backgroundColor: Colors[colorScheme].tint },
-                ]}
-              />
-              <View
-                style={[
-                  styles.currentTimeLine,
-                  { backgroundColor: Colors[colorScheme].tint },
-                ]}
-              />
-            </View>
-          )}
+          {/* Use the dedicated current time indicator component */}
+          <CurrentTimeIndicator
+            key={`time-indicator-${selectedDate}`}
+            colorScheme={colorScheme}
+            isToday={isToday}
+          />
 
           {/* Events */}
           {events.map((event, index) => {
@@ -520,7 +535,7 @@ const styles = StyleSheet.create<DayViewStyles>({
     borderRadius: 6,
     padding: 8,
     overflow: "hidden",
-    zIndex: 50,
+    zIndex: 40,
   },
   previewEvent: {
     opacity: 0.8,

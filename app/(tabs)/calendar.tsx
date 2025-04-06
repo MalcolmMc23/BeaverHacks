@@ -27,6 +27,8 @@ import { EditEventModal } from "@/components/EditEventModal";
 import * as Haptics from "expo-haptics";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import DayView, { CalendarEvent } from "@/components/calendar/DayView";
+import CalendarHeader from "@/components/calendar/CalendarHeader";
+import CurrentTimeIndicator from "@/components/calendar/CurrentTimeIndicator";
 
 // Move these constants to top level
 const burntCopper = "#A0430A"; // Primary accent color from constants
@@ -356,6 +358,58 @@ export default function CalendarScreen() {
     setViewMode(viewMode === "day" ? "month" : "day");
   };
 
+  // Handle navigation to today or previous month
+  const handleNavigatePress = () => {
+    const today = new Date().toISOString().split("T")[0];
+
+    if (new Date().getMonth() === new Date(selectedDate).getMonth()) {
+      // If already in current month, select today's date
+      setSelectedDate(today);
+
+      // Always make sure we're in day view to see the time indicator
+      if (viewMode === "month") {
+        setViewMode("day");
+      }
+
+      // Force reload by setting events state
+      const currentEvents = events[today] || [];
+      setEvents({ ...events, [today]: [...currentEvents] });
+
+      // Mark the date
+      setMarkedDates({
+        [today]: {
+          selected: true,
+          selectedColor: "#FF3B30",
+        },
+      });
+
+      // Scroll to current time if today is selected
+      setTimeout(() => {
+        if (scrollViewRef.current) {
+          const currentHour = new Date().getHours();
+          // Scroll to 1 hour before current time for better context
+          const scrollPosition = Math.max(0, (currentHour - 1) * 60);
+          scrollViewRef.current.scrollTo({
+            y: scrollPosition,
+            animated: false,
+          });
+        }
+      }, 200); // Give a bit more time
+    } else {
+      // Otherwise navigate to previous month
+      const prevMonth = new Date(selectedDate);
+      prevMonth.setMonth(prevMonth.getMonth() - 1);
+      const prevMonthStr = prevMonth.toISOString().split("T")[0];
+      setSelectedDate(prevMonthStr);
+      setMarkedDates({
+        [prevMonthStr]: {
+          selected: true,
+          selectedColor: "#FF3B30",
+        },
+      });
+    }
+  };
+
   // Handle scroll events to track scroll position
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     setScrollOffset(event.nativeEvent.contentOffset.y);
@@ -493,59 +547,15 @@ export default function CalendarScreen() {
     >
       <StatusBar style="dark" />
 
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <TouchableOpacity style={styles.headerButton}>
-            <IconSymbol
-              name="chevron.left"
-              size={24}
-              color={Colors[colorScheme].tint}
-            />
-            <Text
-              style={[
-                styles.headerButtonText,
-                { color: Colors[colorScheme].tint },
-              ]}
-            >
-              {new Date().getMonth() === new Date(selectedDate).getMonth()
-                ? "Today"
-                : "Previous"}
-            </Text>
-          </TouchableOpacity>
-        </View>
-        <Text style={[styles.headerTitle, { color: Colors[colorScheme].tint }]}>
-          {currentMonth.split(" ")[0]} {/* Just show month name */}
-        </Text>
-        <View style={styles.headerRight}>
-          <TouchableOpacity
-            style={styles.headerIconButton}
-            onPress={toggleViewMode}
-          >
-            <IconSymbol
-              name={viewMode === "day" ? "calendar" : "clock"}
-              size={22}
-              color={Colors[colorScheme].tint}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.headerIconButton}>
-            <IconSymbol
-              name="magnifyingglass"
-              size={22}
-              color={Colors[colorScheme].tint}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.headerIconButton}
-            onPress={() => setModalVisible(true)}
-          >
-            <IconSymbol
-              name="plus"
-              size={22}
-              color={Colors[colorScheme].tint}
-            />
-          </TouchableOpacity>
-        </View>
-      </View>
+      <CalendarHeader
+        currentMonth={currentMonth}
+        selectedDate={selectedDate}
+        viewMode={viewMode}
+        colorScheme={colorScheme}
+        onToggleViewMode={toggleViewMode}
+        onAddEventPress={() => setModalVisible(true)}
+        onNavigatePress={handleNavigatePress}
+      />
 
       {viewMode === "month" ? (
         // Month View
@@ -656,18 +666,25 @@ export default function CalendarScreen() {
         </View>
       ) : (
         // Day View
-        <DayView
-          selectedDate={selectedDate}
-          events={events[selectedDate] || []}
-          colorScheme={colorScheme}
-          isDark={isDark}
-          onEventPress={handleEventPress}
-          onTimeSlotPress={handleTimeSlotPress}
-          onInitiateEventCreation={(data) => {
-            setInitialEventData(data);
-            setModalVisible(true);
-          }}
-        />
+        <View style={{ flex: 1, position: "relative" }}>
+          <DayView
+            selectedDate={selectedDate}
+            events={events[selectedDate] || []}
+            colorScheme={colorScheme}
+            isDark={isDark}
+            onEventPress={handleEventPress}
+            onTimeSlotPress={handleTimeSlotPress}
+            onInitiateEventCreation={(data) => {
+              setInitialEventData(data);
+              setModalVisible(true);
+            }}
+          />
+          {/* Add current time indicator */}
+          <CurrentTimeIndicator
+            colorScheme={colorScheme}
+            isToday={selectedDate === new Date().toISOString().split("T")[0]}
+          />
+        </View>
       )}
 
       <View style={styles.tabBar}>
