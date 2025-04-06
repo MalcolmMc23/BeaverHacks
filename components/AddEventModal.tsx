@@ -266,13 +266,6 @@ export function AddEventModal({
               />
             </View>
           </View>
-          
-          <View style={styles.timeConstraintRow}>
-            <IconSymbol name="info.circle" size={16} color={Colors.light.tint} />
-            <ThemedText style={styles.timeConstraintText}>
-              End time must be after start time
-            </ThemedText>
-          </View>
         </View>
 
         <View style={styles.optionsGroup}>
@@ -637,14 +630,5 @@ const styles = StyleSheet.create({
     color: "#FFF",
     fontSize: 16,
     fontWeight: "600",
-  },
-  timeConstraintRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
-  },
-  timeConstraintText: {
-    marginLeft: 8,
-    color: Colors.light.text,
   },
 });

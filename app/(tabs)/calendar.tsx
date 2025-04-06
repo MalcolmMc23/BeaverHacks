@@ -185,7 +185,8 @@ export default function CalendarScreen() {
       end: eventData.endDate,
       location: eventData.location,
       description: eventData.description,
-      color: dragEvent.visible ? dragEvent.color : getRandomColor(),
+      // Always assign a color for all events (including "No title" events)
+      color: initialEventData?.color || getRandomColor(),
       isAllDay: eventData.isAllDay,
       alert: eventData.alert,
       showAs: eventData.showAs,
@@ -574,6 +575,7 @@ export default function CalendarScreen() {
       description: "",
       alert: "None",
       showAs: "Busy",
+      color: getRandomColor(), // Always assign a color
     };
 
     setInitialEventData(initialData);

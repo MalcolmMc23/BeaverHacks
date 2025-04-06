@@ -13,12 +13,17 @@ import { CalendarEvent } from "./DayView";
 interface DraggableEventProps {
   event: CalendarEvent;
   index: number;
-  position: { top: number; height: number };
+  position: { 
+    top: number; 
+    height: number; 
+    endPosition?: number; // Add optional endPosition property
+  };
   formatTime: (date: Date) => string;
   getTimeFromPosition: (yPosition: number) => Date;
   onEventPress: (event: CalendarEvent, index: number) => void;
   onDragStart: () => void;
   onDragEnd: (index: number, newStart: Date, newEnd: Date) => void;
+  style?: any;
 }
 
 const DraggableEvent: React.FC<DraggableEventProps> = ({
@@ -30,6 +35,7 @@ const DraggableEvent: React.FC<DraggableEventProps> = ({
   onEventPress,
   onDragStart,
   onDragEnd,
+  style = {},
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [eventTop, setEventTop] = useState(position.top);
@@ -177,12 +183,15 @@ const DraggableEvent: React.FC<DraggableEventProps> = ({
 
   // Calculate the time label based on current position
   const getTimeLabel = () => {
-    // Always show the updated time based on current position
-    // This will make the time update in real-time during dragging
-    const currentPos = isDragging ? eventTop : position.top;
-    const newStart = getTimeFromPosition(currentPos);
-    const newEnd = new Date(newStart.getTime() + eventDuration);
-    return `${formatTime(newStart)} - ${formatTime(newEnd)}`;
+    // When in dragging mode, calculate based on the drag position
+    if (isDragging) {
+      const newStart = getTimeFromPosition(eventTop);
+      const newEnd = new Date(newStart.getTime() + eventDuration);
+      return `${formatTime(newStart)} - ${formatTime(newEnd)}`;
+    } else {
+      // When not dragging, use the actual event start and end times directly
+      return `${formatTime(event.start)} - ${formatTime(event.end)}`;
+    }
   };
 
   // Handle event press without letting event propagate to parent components
@@ -196,6 +205,12 @@ const DraggableEvent: React.FC<DraggableEventProps> = ({
     }
   };
 
+  // Helper function to get the capitalized importance label
+  const getImportanceLabel = (importance?: string): string => {
+    if (!importance) return '';
+    return importance.charAt(0).toUpperCase() + importance.slice(1);
+  };
+
   return (
     <TouchableOpacity
       style={[
@@ -203,7 +218,12 @@ const DraggableEvent: React.FC<DraggableEventProps> = ({
         {
           top: isDragging ? eventTop : position.top,
           height: position.height,
-          backgroundColor: event.color,
+          // If endPosition is provided, position from the bottom instead of using height
+          ...(position.endPosition && position.endPosition > position.top && {
+            bottom: 1440 - position.endPosition, // 1440 = 24 hours * 60 minutes
+            height: position.endPosition - position.top, // Force explicit height
+          }),
+          backgroundColor: event.color || '#A0430A', // Default to burntCopper if no color specified
           opacity: isDragging ? 0.7 : 1,
           zIndex: isDragging ? 1000 : 100,
           elevation: isDragging ? 5 : 2,
@@ -217,17 +237,56 @@ const DraggableEvent: React.FC<DraggableEventProps> = ({
             borderColor: "#fff",
           }),
         },
+        style,
       ]}
       activeOpacity={0.9}
       onPress={handleEventPress}
       {...panResponder.panHandlers}
     >
-      <Text style={styles.eventTitle} numberOfLines={1}>
+      <Text 
+        style={[
+          styles.eventTitle,
+          styles.textShadow,
+        ]} 
+        numberOfLines={1}
+      >
         {event.title}
       </Text>
-      <Text style={styles.eventTime} numberOfLines={1}>
-        {getTimeLabel()}
-      </Text>
+      
+      {/* Display importance if there is one */}
+      {event.importance && position.height >= 50 && (
+        <Text 
+          style={[
+            styles.importanceLabel,
+            styles.textShadow,
+          ]}
+        >
+          {getImportanceLabel(event.importance)}
+        </Text>
+      )}
+      
+      {position.height >= 40 ? (
+        <Text 
+          style={[
+            styles.eventTime,
+            styles.textShadow,
+          ]} 
+          numberOfLines={1}
+        >
+          {getTimeLabel()}
+        </Text>
+      ) : (
+        // For very short events, show abbreviated time format
+        <Text 
+          style={[
+            styles.eventTimeCompact,
+            styles.textShadow,
+          ]} 
+          numberOfLines={1}
+        >
+          {formatTime(event.start)}
+        </Text>
+      )}
     </TouchableOpacity>
   );
 };
@@ -240,16 +299,36 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     padding: 8,
     overflow: "hidden",
+    // Make sure content is properly positioned within event
+    justifyContent: "center",
   },
   eventTitle: {
     color: "white",
-    fontWeight: "500",
+    fontWeight: "600", // Make text slightly bolder for better readability
     fontSize: 14,
   },
+  importanceLabel: {
+    color: "rgba(255, 255, 255, 0.85)", 
+    fontSize: 11,
+    fontWeight: "500",
+    marginTop: 2,
+    fontStyle: "italic",
+  },
   eventTime: {
-    color: "rgba(255, 255, 255, 0.8)",
+    color: "rgba(255, 255, 255, 0.9)", // Increased opacity for better contrast
     fontSize: 12,
     marginTop: 2,
+  },
+  eventTimeCompact: {
+    color: "rgba(255, 255, 255, 0.9)", // Increased opacity for better contrast
+    fontSize: 10,
+    marginTop: 1,
+  },
+  textShadow: {
+    // Add text shadow to make text readable on any background
+    textShadowColor: 'rgba(0, 0, 0, 0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
 });
 

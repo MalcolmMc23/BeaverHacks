@@ -7,12 +7,12 @@
 const burntCopper = '#A0430A'; // Primary accent color
 const seaMist = '#DFE8E6';     // Secondary/background color
 
-// Importance level colors (brown shades)
+// Importance level colors (more distinct brown shades)
 const importanceColors = {
-  low: '#D4A276',      // Light brown
-  medium: '#B87C4C',   // Medium brown
-  high: '#A0430A',     // Burnt copper (darker brown)
-  urgent: '#692B0A',   // Very dark brown
+  low: '#C8A27D',      // Light sandy brown
+  medium: '#AA7039',    // Medium caramel brown
+  high: '#8B4513',      // Saddle brown
+  urgent: '#5D1C09',    // Deep chocolate brown
 };
 
 export const Colors = {
@@ -25,10 +25,10 @@ export const Colors = {
     tabIconSelected: '#A0430A',
     border: '#E1E1E1',
     importance: {
-      low: '#4CAF50',
-      medium: '#FFC107',
-      high: '#FF9800',
-      urgent: '#F44336',
+      low: '#C8A27D',      // Light sandy brown
+      medium: '#AA7039',    // Medium caramel brown
+      high: '#8B4513',      // Saddle brown
+      urgent: '#5D1C09',    // Deep chocolate brown
     },
   },
   dark: {
@@ -40,10 +40,10 @@ export const Colors = {
     tabIconSelected: '#A0430A',
     border: '#333',
     importance: {
-      low: '#4CAF50',
-      medium: '#FFC107',
-      high: '#FF9800',
-      urgent: '#F44336',
+      low: '#C8A27D',      // Light sandy brown
+      medium: '#AA7039',    // Medium caramel brown
+      high: '#8B4513',      // Saddle brown
+      urgent: '#5D1C09',    // Deep chocolate brown
     },
   },
 } as const;

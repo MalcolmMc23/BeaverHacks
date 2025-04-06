@@ -32,6 +32,7 @@ export interface CalendarEvent {
   isAllDay?: boolean;
   alert?: string;
   showAs?: string;
+  importance?: 'urgent' | 'high' | 'medium' | 'low';
 }
 
 // Array of all hours for day view
@@ -63,18 +64,39 @@ const HOURS = [
   "12",
 ];
 
-// Update the EVENT_COLORS with brown tones
+// Update the EVENT_COLORS with the updated brown shades
 const EVENT_COLORS = [
-  burntCopper,
-  "#5856D6",
-  "#8B4513", // Another brown tone
-  "#654321", // Darker brown
-  "#6B4226", // Medium brown
-  "#AF52DE",
+  "#5D1C09", // Deep chocolate brown - for urgent events
+  "#8B4513", // Saddle brown - for high importance events 
+  "#AA7039", // Medium caramel brown - for medium importance events
+  "#C8A27D", // Light sandy brown - for low importance events
+  "#AA7039", // Default medium caramel brown
 ];
 
-const getRandomColor = () =>
-  EVENT_COLORS[Math.floor(Math.random() * EVENT_COLORS.length)];
+// Helper function to get color based on importance
+const getColorByImportance = (event: CalendarEvent): string => {
+  // If event already has a color that's not related to importance, preserve it
+  if (event.color && !event.importance) {
+    return event.color;
+  }
+  
+  // Determine color based on importance
+  if (event.importance) {
+    switch(event.importance) {
+      case 'urgent': return EVENT_COLORS[0]; // Deep chocolate
+      case 'high': return EVENT_COLORS[1];   // Saddle brown
+      case 'medium': return EVENT_COLORS[2]; // Caramel brown
+      case 'low': return EVENT_COLORS[3];    // Light sandy
+      default: return EVENT_COLORS[4];       // Default caramel
+    }
+  }
+  
+  // Default color for events without importance
+  return EVENT_COLORS[4];
+};
+
+// Modified random color function to return default brown
+const getRandomColor = () => EVENT_COLORS[4];
 
 // Props definition
 interface DayViewProps {
@@ -87,9 +109,10 @@ interface DayViewProps {
   onInitiateEventCreation?: (data: {
     startDate: Date;
     endDate: Date;
-    color: string;
+    color?: string | null;
     fromDrag?: boolean;
     draggedEventIndex?: number;
+    importance?: 'urgent' | 'high' | 'medium' | 'low';
   }) => void;
 }
 
@@ -108,7 +131,7 @@ export const DayView: React.FC<DayViewProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [lastTapTime, setLastTapTime] = useState(0);
   const [lastTapPosition, setLastTapPosition] = useState(0);
-  const DOUBLE_TAP_DELAY = 10000; // ms between taps to count as double-tap
+  const DOUBLE_TAP_DELAY = 1000; // ms between taps to count as double-tap (reduced from 10000ms)
 
   const [dragEvent, setDragEvent] = useState<{
     visible: boolean;
@@ -117,14 +140,14 @@ export const DayView: React.FC<DayViewProps> = ({
   }>({
     visible: false,
     startY: 0,
-    color: getRandomColor(),
+    color: EVENT_COLORS[2], // Medium importance for default new events
   });
   const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(
     null
   );
   const LONG_PRESS_DURATION = 1200; // 1.2 seconds to trigger event creation modal
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [showTooltip, setShowTooltip] = useState(false);
+  const [showTooltip, setShowTooltip] = useState(false); // Change to false by default
   const tooltipOpacity = useRef(new Animated.Value(0)).current;
 
   // Update current time every minute
@@ -145,27 +168,141 @@ export const DayView: React.FC<DayViewProps> = ({
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
-  // Position events on the time grid
+  // Position events on the time grid with precise alignment
   const positionEvent = (event: CalendarEvent) => {
     const startHour = event.start.getHours();
     const startMinute = event.start.getMinutes();
     const endHour = event.end.getHours();
     const endMinute = event.end.getMinutes();
 
-    // Calculate position and height
+    // Calculate position in pixels (60px per hour, 1px per minute)
     const startPosition = startHour * 60 + startMinute;
     const endPosition = endHour * 60 + endMinute;
-    const duration = endPosition - startPosition;
+    
+    // Calculate exact height in pixels
+    const exactHeight = endPosition - startPosition;
 
     return {
       top: startPosition,
-      height: Math.max(duration, 30), // Minimum height for visibility
+      height: exactHeight,
+      endPosition: endPosition,
     };
   };
 
+  // Detect and handle overlapping events
+  const handleOverlappingEvents = () => {
+    if (!events.length) return [];
+    
+    // Sort events by start time first, then by duration (shorter events first for better visual hierarchy)
+    const sortedEvents = [...events].sort((a, b) => {
+      const aStart = a.start.getTime();
+      const bStart = b.start.getTime();
+      if (aStart !== bStart) return aStart - bStart;
+      
+      // If start times are the same, sort by duration (shorter first)
+      const aDuration = a.end.getTime() - a.start.getTime();
+      const bDuration = b.end.getTime() - b.start.getTime();
+      return aDuration - bDuration;
+    });
+    
+    // Ensure each event has a color based on importance
+    sortedEvents.forEach(event => {
+      if (!event.color) {
+        // Assign color based on importance
+        event.color = getColorByImportance(event);
+      }
+    });
+    
+    // Group overlapping events with a more precise algorithm
+    const groups: CalendarEvent[][] = [];
+    let currentGroup: CalendarEvent[] = [];
+    
+    sortedEvents.forEach((event, index) => {
+      if (index === 0) {
+        currentGroup.push(event);
+        return;
+      }
+      
+      // Check if current event overlaps with any event in current group
+      const overlaps = currentGroup.some(groupEvent => {
+        // Standard overlap check: events overlap in time
+        const timeOverlap = event.start < groupEvent.end && event.end > groupEvent.start;
+        
+        // Check if events end at the same time (within 1 minute)
+        const sameEndTime = Math.abs(event.end.getTime() - groupEvent.end.getTime()) <= 60000;
+        
+        // If they end at the same time, we want to treat them as overlapping
+        // only if they're within 30 minutes of each other
+        const closeStartTimes = sameEndTime && 
+          Math.abs(event.start.getTime() - groupEvent.start.getTime()) <= 30 * 60 * 1000;
+          
+        return timeOverlap || closeStartTimes;
+      });
+      
+      if (overlaps) {
+        currentGroup.push(event);
+      } else {
+        if (currentGroup.length > 0) {
+          groups.push([...currentGroup]);
+        }
+        currentGroup = [event];
+      }
+    });
+    
+    // Add the last group if it's not empty
+    if (currentGroup.length > 0) {
+      groups.push(currentGroup);
+    }
+    
+    // Calculate layout for each event
+    const eventLayouts = sortedEvents.map(event => {
+      // Find the group this event belongs to
+      const eventGroup = groups.find(group => group.includes(event));
+      if (!eventGroup || eventGroup.length === 1) {
+        // No overlap - use full width
+        return {
+          event,
+          left: 60, // Default left position
+          width: '100%',
+          column: 0,
+          totalColumns: 1
+        };
+      }
+      
+      // For overlapping events, implement a smarter column algorithm
+      // Find all events that overlap with the current event's time range
+      const overlappingEvents = eventGroup.filter(e => 
+        (e.start < event.end && e.end > event.start)
+      );
+      
+      const totalOverlapping = overlappingEvents.length;
+      const overlapIndex = overlappingEvents.indexOf(event);
+      
+      // Calculate width based on number of overlapping events
+      const columnWidth = 100 / totalOverlapping;
+      
+      return {
+        event,
+        left: 60 + (columnWidth * overlapIndex * 0.9), // Slight adjustment for visual appearance
+        width: `${columnWidth * 0.95}%`, // Make slightly narrower for visual separation
+        column: overlapIndex,
+        totalColumns: totalOverlapping
+      };
+    });
+    
+    return eventLayouts;
+  };
+
+  // Calculate event layouts once when events change
+  const [eventLayouts, setEventLayouts] = useState<any[]>([]);
+  
+  useEffect(() => {
+    setEventLayouts(handleOverlappingEvents());
+  }, [events]);
+
   // Get time from Y position in the timeline
   const getTimeFromPosition = (yPosition: number) => {
-    // Calculate hour and minute from y position
+    // Calculate hour and minute from y position (1 hour = 60px)
     const hour = Math.floor(yPosition / 60);
     const minute = Math.round((yPosition % 60) / 15) * 15; // Round to nearest 15 min
 
@@ -173,6 +310,8 @@ export const DayView: React.FC<DayViewProps> = ({
     const date = new Date(selectedDate);
     date.setHours(hour);
     date.setMinutes(minute);
+    date.setSeconds(0); // Reset seconds
+    date.setMilliseconds(0); // Reset milliseconds
 
     return date;
   };
@@ -270,12 +409,15 @@ export const DayView: React.FC<DayViewProps> = ({
         // Get the tap position accounting for scroll
         const { locationY } = event.nativeEvent;
         const tapY = locationY + scrollOffset;
+        
+        // Round to nearest 15-minute interval for better alignment
+        const roundedY = Math.round(tapY / 15) * 15;
 
         // Store the starting Y position
         setDragEvent({
           visible: false, // Don't show preview immediately
-          startY: tapY,
-          color: getRandomColor(),
+          startY: roundedY,
+          color: EVENT_COLORS[2], // Medium importance for new events
         });
 
         // Start a timer to differentiate between tap and long press
@@ -287,8 +429,8 @@ export const DayView: React.FC<DayViewProps> = ({
             // Show the preview event at this position
             setDragEvent({
               visible: true,
-              startY: tapY,
-              color: getRandomColor(),
+              startY: roundedY,
+              color: EVENT_COLORS[2], // Medium importance for new events
             });
 
             // Provide haptic feedback
@@ -365,17 +507,25 @@ export const DayView: React.FC<DayViewProps> = ({
 
         // If we're showing a preview event, finalize its creation
         if (isDragging && dragEvent.visible) {
-          // Calculate the start and end times
+          // Calculate the start time from the position
           const startDate = getTimeFromPosition(dragEvent.startY);
-          const endDate = new Date(startDate);
-          endDate.setHours(endDate.getHours() + 1); // Default 1 hour duration
-
+          
+          // Round to 15-minute intervals for precision
+          const roundedMinutes = Math.round(startDate.getMinutes() / 15) * 15;
+          startDate.setMinutes(roundedMinutes);
+          startDate.setSeconds(0);
+          startDate.setMilliseconds(0);
+          
+          // Create an end time exactly 1 hour later
+          const endDate = new Date(startDate.getTime() + 60 * 60 * 1000); // Exactly 1 hour (60 min * 60 sec * 1000 ms)
+          
           // Call the creation handler
           if (onInitiateEventCreation) {
             onInitiateEventCreation({
               startDate,
               endDate,
-              color: dragEvent.color,
+              color: undefined, // Let parent component determine color
+              importance: undefined, // Let user choose importance in the modal
               fromDrag: true,
             });
           }
@@ -384,7 +534,7 @@ export const DayView: React.FC<DayViewProps> = ({
           setDragEvent({
             visible: false,
             startY: 0,
-            color: getRandomColor(),
+            color: EVENT_COLORS[2], // Keep using medium color for preview only
           });
         }
 
@@ -450,19 +600,29 @@ export const DayView: React.FC<DayViewProps> = ({
     // Create a copy of the events array
     const updatedEvents = [...events];
     if (updatedEvents[eventIndex]) {
-      // Update the event with new times
+      // Ensure the event has a color based on importance
+      if (!updatedEvents[eventIndex].color) {
+        updatedEvents[eventIndex].color = getColorByImportance(updatedEvents[eventIndex]);
+      }
+      
+      // Calculate the exact duration to preserve it
+      const originalDuration = updatedEvents[eventIndex].end.getTime() - updatedEvents[eventIndex].start.getTime();
+      
+      // Use the new start time, but preserve the exact duration
+      const preservedEnd = new Date(newStart.getTime() + originalDuration);
       updatedEvents[eventIndex] = {
         ...updatedEvents[eventIndex],
         start: newStart,
-        end: newEnd,
+        end: preservedEnd,
       };
 
       // Trigger any parent component updates with specific drag data
       if (onInitiateEventCreation) {
         onInitiateEventCreation({
           startDate: newStart,
-          endDate: newEnd,
-          color: updatedEvents[eventIndex].color || getRandomColor(),
+          endDate: preservedEnd, // Use the preserved end time
+          color: updatedEvents[eventIndex].color || EVENT_COLORS[2], // Ensure color is never undefined
+          importance: updatedEvents[eventIndex].importance || 'medium',
           fromDrag: true,
           draggedEventIndex: eventIndex,
         });
@@ -498,15 +658,29 @@ export const DayView: React.FC<DayViewProps> = ({
     ) {
       // This is a double tap - create an event
       const startTime = getTimeFromPosition(tapPosition);
-      const endTime = new Date(startTime);
-      endTime.setHours(endTime.getHours() + 1); // 1 hour event
+      
+      // Create end time exactly 1 hour later (60 minutes)
+      const endTime = new Date(startTime.getTime() + 60 * 60 * 1000);
+
+      // Round to 15-minute intervals for better time alignment
+      const roundedMinutes = Math.round(startTime.getMinutes() / 15) * 15;
+      startTime.setMinutes(roundedMinutes);
+      startTime.setSeconds(0);
+      startTime.setMilliseconds(0);
+      
+      // Calculate end time based on start time
+      endTime.setMinutes(roundedMinutes);
+      endTime.setSeconds(0);
+      endTime.setMilliseconds(0);
 
       if (onInitiateEventCreation) {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         onInitiateEventCreation({
           startDate: startTime,
           endDate: endTime,
-          color: getRandomColor(),
+          color: undefined, // Let parent component determine color
+          importance: undefined, // Let user choose importance in the modal
+          fromDrag: true, // Indicate this was from user interaction
         });
       }
     } else {
@@ -519,28 +693,6 @@ export const DayView: React.FC<DayViewProps> = ({
     }
   };
 
-  // Show tooltip after first tap to guide user
-  useEffect(() => {
-    if (lastTapTime > 0 && !showTooltip) {
-      setShowTooltip(true);
-      Animated.sequence([
-        Animated.timing(tooltipOpacity, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.delay(2000),
-        Animated.timing(tooltipOpacity, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        setShowTooltip(false);
-      });
-    }
-  }, [lastTapTime]);
-
   return (
     <>
       <View
@@ -552,26 +704,9 @@ export const DayView: React.FC<DayViewProps> = ({
         <Text
           style={[styles.dayHeaderText, { color: Colors[colorScheme].text }]}
         >
-          {selectedDayName} — {selectedDayFormatted}
+          {selectedDayName} — Apr 6, 2025
         </Text>
       </View>
-
-      {/* Tooltip to guide users on how to create events */}
-      {showTooltip && (
-        <Animated.View
-          style={[
-            styles.tooltip,
-            {
-              opacity: tooltipOpacity,
-              backgroundColor: Colors[colorScheme].tint,
-            },
-          ]}
-        >
-          <RNText style={styles.tooltipText}>
-            Double-tap to create a new event
-          </RNText>
-        </Animated.View>
-      )}
 
       <ScrollView
         ref={scrollViewRef}
@@ -592,7 +727,7 @@ export const DayView: React.FC<DayViewProps> = ({
           {HOURS.map((hour, index) => {
             const isNoon = hour === "Noon";
             const displayHour = isNoon ? "12" : hour;
-            const ampm = index < 12 ? "AM" : "PM";
+            const ampm = index < 12 ? "AM" : (index === 12 ? "PM" : "PM");
             const timeLabel = isNoon ? "Noon" : `${displayHour} ${ampm}`;
             const actualHour = index;
 
@@ -613,7 +748,7 @@ export const DayView: React.FC<DayViewProps> = ({
                   <Text
                     style={[styles.ampm, { color: Colors[colorScheme].icon }]}
                   >
-                    {hour !== "Noon" ? ampm : ""}
+                    {isNoon ? "PM" : ampm}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -650,15 +785,67 @@ export const DayView: React.FC<DayViewProps> = ({
             isToday={isToday}
           />
 
-          {/* Events - Replace the TouchableOpacity with DraggableEvent */}
-          {events.map((event, index) => {
-            const { top, height } = positionEvent(event);
+          {/* Events - Now using the calculated layouts */}
+          {eventLayouts.map((layout, index) => {
+            const { event, left, width, column, totalColumns } = layout;
+            
+            // Calculate position directly from the event times
+            const startHour = event.start.getHours();
+            const startMinute = event.start.getMinutes();
+            const endHour = event.end.getHours();
+            const endMinute = event.end.getMinutes();
+
+            // Calculate exact pixel positions (60px per hour)
+            const startPosition = startHour * 60 + startMinute;
+            const endPosition = endHour * 60 + endMinute;
+            
+            // Calculate exact height from the time difference (in minutes)
+            const exactHeight = endPosition - startPosition;
+            
+            // Calculate precise positioning for overlapping events
+            const eventWidth = totalColumns > 1 
+              ? `${(100 - 5) / totalColumns}%`  // Slight adjustment for visual clarity
+              : undefined;
+            
+            const eventLeft = column === 0 
+              ? 60 
+              : `calc(60px + ${(column / totalColumns) * 95}%)`; // 95% to leave small gap
+            
+            const eventRight = column === totalColumns - 1 ? 10 : undefined;
+            
+            // Get color based on event importance
+            const eventColor = getColorByImportance(event);
+            
             return (
               <DraggableEvent
                 key={index}
-                event={event}
-                index={index}
-                position={{ top, height }}
+                event={{
+                  ...event, 
+                  color: eventColor,
+                  // Ensure we have the importance data
+                  importance: event.importance || 'medium'
+                }}
+                index={events.indexOf(event)}
+                position={{ 
+                  top: startPosition, 
+                  height: exactHeight,
+                  endPosition: endPosition,
+                }}
+                style={{
+                  left: eventLeft,
+                  right: eventRight,
+                  width: eventWidth,
+                  marginLeft: 1,
+                  marginRight: 1,
+                  borderRadius: 8,
+                  borderLeftWidth: column > 0 ? 2 : 0,
+                  borderLeftColor: 'rgba(255,255,255,0.6)',
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 2,
+                  elevation: 2,
+                }}
                 formatTime={formatTime}
                 getTimeFromPosition={getTimeFromPosition}
                 onEventPress={onEventPress}
@@ -676,18 +863,21 @@ export const DayView: React.FC<DayViewProps> = ({
                 styles.previewEvent,
                 {
                   top: dragEvent.startY,
-                  height: 60, // Default 1 hour height
-                  backgroundColor: dragEvent.color,
+                  height: 60, // Exactly 1 hour (60px)
+                  backgroundColor: EVENT_COLORS[2], // Medium importance brown
+                  left: 60,
+                  right: 10,
+                  borderRadius: 8,
                 },
               ]}
             >
-              <Text style={styles.eventTitle}>New Event</Text>
-              <Text style={styles.eventTime}>
+              <Text style={[styles.eventTitle, styles.textShadow]}>New Event</Text>
+              <Text style={[styles.importanceLabel, styles.textShadow]}>Medium</Text>
+              <Text style={[styles.eventTime, styles.textShadow]}>
                 {formatTime(getTimeFromPosition(dragEvent.startY))} -{" "}
                 {formatTime(
                   new Date(
-                    getTimeFromPosition(dragEvent.startY).getTime() +
-                      60 * 60 * 1000
+                    getTimeFromPosition(dragEvent.startY).getTime() + 60 * 60 * 1000 // Exactly 1 hour
                   )
                 )}
               </Text>
@@ -720,6 +910,12 @@ interface DayViewStyles {
   eventTime: TextStyle;
   tooltip: ViewStyle;
   tooltipText: TextStyle;
+  textShadow: TextStyle;
+  importanceLabel: TextStyle;
+  onboardingBanner: ViewStyle;
+  onboardingText: TextStyle;
+  dismissButton: ViewStyle;
+  dismissText: TextStyle;
 }
 
 const styles = StyleSheet.create<
@@ -780,8 +976,6 @@ const styles = StyleSheet.create<
   },
   eventItem: {
     position: "absolute",
-    left: 60,
-    right: 10,
     borderRadius: 6,
     padding: 8,
     overflow: "hidden",
@@ -826,21 +1020,87 @@ const styles = StyleSheet.create<
   },
   tooltip: {
     position: "absolute",
-    padding: 10,
-    borderRadius: 8,
-    top: 50,
+    padding: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    top: 80, // Position it more centrally
+    left: 40,
+    right: 40,
     alignSelf: "center",
-    zIndex: 1000,
+    zIndex: 9999, // Extremely high to ensure visibility
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 8,
+    elevation: 10,
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.6)",
   },
   tooltipText: {
     color: "white",
+    fontWeight: "700",
+    fontSize: 18,
+    textAlign: "center",
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  textShadow: {
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 10,
+  },
+  importanceLabel: {
+    color: "rgba(255, 255, 255, 0.85)",
+    fontSize: 11,
+    fontWeight: "500",
+    marginTop: 2,
+    fontStyle: "italic",
+  },
+  onboardingBanner: {
+    backgroundColor: "#A0430A", // Burnt copper
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+    margin: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.5)",
+    flexDirection: "row", // Allow for dismiss button
+    position: "relative", // For absolute positioning of the dismiss button
+  },
+  onboardingText: {
+    color: "white",
     fontWeight: "600",
-    fontSize: 14,
+    fontSize: 15,
+    textAlign: "center",
+    flex: 1,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  dismissButton: {
+    position: "absolute",
+    right: 8,
+    top: 8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.3)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dismissText: {
+    color: "white",
+    fontSize: 18,
+    fontWeight: "bold",
+    lineHeight: 22,
   },
 });
 
