@@ -19,6 +19,22 @@ import { Colors } from '@/constants/Colors';
 
 type ImportanceLevel = 'low' | 'medium' | 'high' | 'urgent';
 
+type NotificationTime = {
+  label: string;
+  value: number; // minutes before event
+};
+
+const notificationOptions: NotificationTime[] = [
+  { label: 'At time of event', value: 0 },
+  { label: '5 minutes before', value: 5 },
+  { label: '10 minutes before', value: 10 },
+  { label: '15 minutes before', value: 15 },
+  { label: '30 minutes before', value: 30 },
+  { label: '1 hour before', value: 60 },
+  { label: '2 hours before', value: 120 },
+  { label: 'Custom', value: -1 },
+];
+
 type AddEventModalProps = {
   onCancel: () => void;
   onAdd: (event: {
@@ -28,7 +44,7 @@ type AddEventModalProps = {
     startDate: Date;
     endDate: Date;
     description?: string;
-    alert?: string;
+    notification?: NotificationTime;
     showAs?: string;
     importance: ImportanceLevel;
   }) => void;
@@ -39,12 +55,15 @@ export function AddEventModal({ onCancel, onAdd }: AddEventModalProps) {
   const [location, setLocation] = useState('');
   const [isAllDay, setIsAllDay] = useState(false);
   const [startDate, setStartDate] = useState(new Date());
-  const [endDate, setEndDate] = useState(new Date(Date.now() + 60 * 60 * 1000)); // 1 hour later
+  const [endDate, setEndDate] = useState(new Date(Date.now() + 60 * 60 * 1000));
   const [description, setDescription] = useState('');
-  const [alert, setAlert] = useState('None');
+  const [notification, setNotification] = useState<NotificationTime>(notificationOptions[0]);
   const [showAs, setShowAs] = useState('Busy');
   const [importance, setImportance] = useState<ImportanceLevel>('low');
   const [showImportanceModal, setShowImportanceModal] = useState(false);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [customMinutes, setCustomMinutes] = useState('');
+  const [showCustomInput, setShowCustomInput] = useState(false);
 
   const importanceLevels: ImportanceLevel[] = ['low', 'medium', 'high', 'urgent'];
 
@@ -58,11 +77,46 @@ export function AddEventModal({ onCancel, onAdd }: AddEventModalProps) {
       startDate,
       endDate,
       description,
-      alert,
+      notification,
       showAs,
       importance,
     });
   };
+
+  const handleNotificationSelect = (option: NotificationTime) => {
+    if (option.value === -1) {
+      setShowCustomInput(true);
+    } else {
+      setNotification(option);
+      setShowNotificationModal(false);
+      setShowCustomInput(false);
+    }
+  };
+
+  const handleCustomNotification = () => {
+    const minutes = parseInt(customMinutes);
+    if (!isNaN(minutes) && minutes > 0) {
+      setNotification({
+        label: `${minutes} minutes before`,
+        value: minutes,
+      });
+      setShowCustomInput(false);
+      setShowNotificationModal(false);
+    }
+  };
+
+  const renderNotificationOption = (option: NotificationTime) => (
+    <TouchableOpacity
+      key={option.label}
+      style={styles.optionItem}
+      onPress={() => handleNotificationSelect(option)}
+    >
+      <ThemedText style={styles.optionText}>{option.label}</ThemedText>
+      {notification.value === option.value && (
+        <IconSymbol name="checkmark" size={20} color={Colors.light.tint} />
+      )}
+    </TouchableOpacity>
+  );
 
   const renderImportanceOption = (level: ImportanceLevel) => (
     <TouchableOpacity
@@ -157,10 +211,15 @@ export function AddEventModal({ onCancel, onAdd }: AddEventModalProps) {
         </View>
 
         <View style={styles.optionsGroup}>
-          <TouchableOpacity style={styles.optionRow}>
+          <TouchableOpacity 
+            style={styles.optionRow}
+            onPress={() => setShowNotificationModal(true)}
+          >
             <ThemedText style={styles.label}>Push Notification</ThemedText>
             <View style={styles.optionValue}>
-              <ThemedText style={styles.optionValueText}>{alert}</ThemedText>
+              <ThemedText style={styles.optionValueText}>
+                {notification.label}
+              </ThemedText>
               <IconSymbol name="chevron.right" size={20} color={Colors.light.icon} />
             </View>
           </TouchableOpacity>
@@ -199,6 +258,45 @@ export function AddEventModal({ onCancel, onAdd }: AddEventModalProps) {
           multiline
         />
       </ScrollView>
+
+      <Modal
+        visible={showNotificationModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowNotificationModal(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowNotificationModal(false)}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <ThemedText style={styles.modalTitle}>Push Notification</ThemedText>
+            </View>
+            {showCustomInput ? (
+              <View style={styles.customInputContainer}>
+                <TextInput
+                  style={styles.customInput}
+                  placeholder="Enter minutes"
+                  value={customMinutes}
+                  onChangeText={setCustomMinutes}
+                  keyboardType="number-pad"
+                  placeholderTextColor={Colors.light.icon}
+                />
+                <TouchableOpacity 
+                  style={styles.customInputButton}
+                  onPress={handleCustomNotification}
+                >
+                  <ThemedText style={styles.customInputButtonText}>Set</ThemedText>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              notificationOptions.map(renderNotificationOption)
+            )}
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       <Modal
         visible={showImportanceModal}
@@ -410,5 +508,46 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
     borderWidth: 1,
     borderColor: Colors.light.icon,
+  },
+  optionItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.light.icon,
+  },
+  optionText: {
+    fontSize: 17,
+    color: Colors.light.text,
+  },
+  customInputContainer: {
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.light.icon,
+  },
+  customInput: {
+    flex: 1,
+    height: 40,
+    backgroundColor: Colors.light.background,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    marginRight: 12,
+    color: Colors.light.text,
+    borderWidth: 1,
+    borderColor: Colors.light.icon,
+  },
+  customInputButton: {
+    backgroundColor: Colors.light.tint,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  customInputButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 }); 
