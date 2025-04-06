@@ -16,6 +16,7 @@ import { useState, useRef } from "react";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { AddEventModal } from "@/components/AddEventModal";
+import { EditEventModal } from "@/components/EditEventModal";
 
 // Move these constants to top level
 const burntCopper = "#A0430A"; // Primary accent color from constants
@@ -100,6 +101,11 @@ export default function CalendarScreen() {
   );
   const [events, setEvents] = useState<EventsState>({});
   const [modalVisible, setModalVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(
+    null
+  );
+  const [selectedEventIndex, setSelectedEventIndex] = useState<number>(-1);
   const [markedDates, setMarkedDates] = useState<MarkedDatesState>({});
   const scrollViewRef = useRef<ScrollView>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("day"); // Default to day view like in the screenshot
@@ -136,6 +142,7 @@ export default function CalendarScreen() {
     description?: string;
     alert?: string;
     showAs?: string;
+    importance?: string;
   }) => {
     const newEvent: CalendarEvent = {
       title: eventData.title,
@@ -166,6 +173,87 @@ export default function CalendarScreen() {
     }));
 
     setModalVisible(false);
+  };
+
+  const handleEditEvent = (eventData: {
+    title: string;
+    location: string;
+    isAllDay: boolean;
+    startDate: Date;
+    endDate: Date;
+    description?: string;
+    notification?: { label: string; value: number };
+    showAs?: string;
+    importance: string;
+    color?: string;
+  }) => {
+    if (selectedEventIndex === -1 || !selectedEvent) return;
+
+    const updatedEvent: CalendarEvent = {
+      title: eventData.title,
+      start: eventData.startDate,
+      end: eventData.endDate,
+      location: eventData.location,
+      description: eventData.description,
+      color: eventData.color || selectedEvent.color,
+      isAllDay: eventData.isAllDay,
+      alert: eventData.notification?.label,
+      showAs: eventData.showAs,
+    };
+
+    // Update the event in the events state
+    setEvents((prevEvents) => {
+      const dateEvents = [...(prevEvents[selectedDate] || [])];
+      dateEvents[selectedEventIndex] = updatedEvent;
+      return {
+        ...prevEvents,
+        [selectedDate]: dateEvents,
+      };
+    });
+
+    setEditModalVisible(false);
+    setSelectedEvent(null);
+    setSelectedEventIndex(-1);
+  };
+
+  const handleDeleteEvent = () => {
+    if (selectedEventIndex === -1) return;
+
+    // Remove the event from the events state
+    setEvents((prevEvents) => {
+      const dateEvents = [...(prevEvents[selectedDate] || [])];
+      dateEvents.splice(selectedEventIndex, 1);
+
+      // If there are no more events on this date, remove the date marker
+      if (dateEvents.length === 0) {
+        setMarkedDates((prevMarkedDates) => {
+          const newMarkedDates = { ...prevMarkedDates };
+          if (newMarkedDates[selectedDate]) {
+            newMarkedDates[selectedDate] = {
+              ...newMarkedDates[selectedDate],
+              marked: false,
+              dots: undefined,
+            };
+          }
+          return newMarkedDates;
+        });
+      }
+
+      return {
+        ...prevEvents,
+        [selectedDate]: dateEvents,
+      };
+    });
+
+    setEditModalVisible(false);
+    setSelectedEvent(null);
+    setSelectedEventIndex(-1);
+  };
+
+  const handleEventPress = (event: CalendarEvent, index: number) => {
+    setSelectedEvent(event);
+    setSelectedEventIndex(index);
+    setEditModalVisible(true);
   };
 
   // Format time for display
@@ -339,7 +427,7 @@ export default function CalendarScreen() {
             <ScrollView style={styles.monthViewEventsList}>
               {events[selectedDate]?.length > 0 ? (
                 events[selectedDate].map((event, index) => (
-                  <View
+                  <TouchableOpacity
                     key={index}
                     style={[
                       styles.monthViewEventItem,
@@ -347,6 +435,7 @@ export default function CalendarScreen() {
                         backgroundColor: event.color,
                       },
                     ]}
+                    onPress={() => handleEventPress(event, index)}
                   >
                     <Text style={styles.eventTitle} numberOfLines={1}>
                       {event.title}
@@ -354,7 +443,7 @@ export default function CalendarScreen() {
                     <Text style={styles.eventTime} numberOfLines={1}>
                       {formatTime(event.start)} - {formatTime(event.end)}
                     </Text>
-                  </View>
+                  </TouchableOpacity>
                 ))
               ) : (
                 <Text
@@ -477,7 +566,7 @@ export default function CalendarScreen() {
               {events[selectedDate]?.map((event, index) => {
                 const { top, height } = positionEvent(event);
                 return (
-                  <View
+                  <TouchableOpacity
                     key={index}
                     style={[
                       styles.eventItem,
@@ -487,6 +576,7 @@ export default function CalendarScreen() {
                         backgroundColor: event.color,
                       },
                     ]}
+                    onPress={() => handleEventPress(event, index)}
                   >
                     <Text style={styles.eventTitle} numberOfLines={1}>
                       {event.title}
@@ -494,7 +584,7 @@ export default function CalendarScreen() {
                     <Text style={styles.eventTime} numberOfLines={1}>
                       {formatTime(event.start)} - {formatTime(event.end)}
                     </Text>
-                  </View>
+                  </TouchableOpacity>
                 );
               })}
             </View>
@@ -531,6 +621,43 @@ export default function CalendarScreen() {
           onCancel={() => setModalVisible(false)}
           onAdd={handleAddEvent}
         />
+      </Modal>
+
+      {/* Edit Event Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={editModalVisible}
+        onRequestClose={() => {
+          setEditModalVisible(false);
+          setSelectedEvent(null);
+          setSelectedEventIndex(-1);
+        }}
+      >
+        {selectedEvent && (
+          <EditEventModal
+            event={{
+              title: selectedEvent.title,
+              location: selectedEvent.location || "",
+              isAllDay: selectedEvent.isAllDay || false,
+              startDate: selectedEvent.start,
+              endDate: selectedEvent.end,
+              description: selectedEvent.description,
+              notification: selectedEvent.alert
+                ? { label: selectedEvent.alert, value: 0 }
+                : undefined,
+              showAs: selectedEvent.showAs,
+              color: selectedEvent.color,
+            }}
+            onCancel={() => {
+              setEditModalVisible(false);
+              setSelectedEvent(null);
+              setSelectedEventIndex(-1);
+            }}
+            onSave={handleEditEvent}
+            onDelete={handleDeleteEvent}
+          />
+        )}
       </Modal>
     </SafeAreaView>
   );
