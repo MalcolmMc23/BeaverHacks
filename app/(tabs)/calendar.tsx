@@ -17,6 +17,10 @@ import { useState, useRef } from "react";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import DateTimePicker from "@react-native-community/datetimepicker";
 
+// Move these constants to top level
+const burntCopper = "#A0430A"; // Primary accent color from constants
+const seaMist = "#DFE8E6"; // Secondary color from constants
+
 // Define types for our events
 interface CalendarEvent {
   title: string;
@@ -37,6 +41,16 @@ interface MarkedDatesState {
     dots?: Array<{ color: string }>;
   };
 }
+
+// Update the EVENT_COLORS with brown tones
+const EVENT_COLORS = [
+  burntCopper,
+  "#5856D6",
+  "#8B4513", // Another brown tone
+  "#654321", // Darker brown
+  "#6B4226", // Medium brown
+  "#AF52DE",
+];
 
 // Array of all hours for day view
 const HOURS = [
@@ -66,15 +80,6 @@ const HOURS = [
   "11",
 ];
 
-// Get random color for events
-const EVENT_COLORS = [
-  "#FF2D55",
-  "#5856D6",
-  "#FF9500",
-  "#34C759",
-  "#007AFF",
-  "#AF52DE",
-];
 const getRandomColor = () =>
   EVENT_COLORS[Math.floor(Math.random() * EVENT_COLORS.length)];
 
@@ -217,12 +222,12 @@ export default function CalendarScreen() {
             <IconSymbol
               name="chevron.left"
               size={24}
-              color={isDark ? "#FF2D55" : "#FF3B30"}
+              color={Colors[colorScheme ?? "light"].tint}
             />
             <Text
               style={[
                 styles.headerButtonText,
-                { color: isDark ? "#FF2D55" : "#FF3B30" },
+                { color: Colors[colorScheme ?? "light"].tint },
               ]}
             >
               {new Date().getMonth() === new Date(selectedDate).getMonth()
@@ -234,7 +239,7 @@ export default function CalendarScreen() {
         <Text
           style={[
             styles.headerTitle,
-            { color: isDark ? "#FF2D55" : "#FF3B30" },
+            { color: Colors[colorScheme ?? "light"].tint },
           ]}
         >
           {currentMonth.split(" ")[0]} {/* Just show month name */}
@@ -247,14 +252,14 @@ export default function CalendarScreen() {
             <IconSymbol
               name={viewMode === "day" ? "calendar" : "clock"}
               size={22}
-              color={isDark ? "#FF2D55" : "#FF3B30"}
+              color={Colors[colorScheme ?? "light"].tint}
             />
           </TouchableOpacity>
           <TouchableOpacity style={styles.headerIconButton}>
             <IconSymbol
               name="magnifyingglass"
               size={22}
-              color={isDark ? "#FF2D55" : "#FF3B30"}
+              color={Colors[colorScheme ?? "light"].tint}
             />
           </TouchableOpacity>
           <TouchableOpacity
@@ -264,7 +269,7 @@ export default function CalendarScreen() {
             <IconSymbol
               name="plus"
               size={22}
-              color={isDark ? "#FF2D55" : "#FF3B30"}
+              color={Colors[colorScheme ?? "light"].tint}
             />
           </TouchableOpacity>
         </View>
@@ -336,9 +341,9 @@ export default function CalendarScreen() {
             theme={{
               calendarBackground: Colors[colorScheme ?? "light"].background,
               textSectionTitleColor: Colors[colorScheme ?? "light"].text,
-              selectedDayBackgroundColor: isDark ? "#FF2D55" : "#FF3B30",
-              todayTextColor: isDark ? "#FF2D55" : "#FF3B30",
-              arrowColor: isDark ? "#FF2D55" : "#FF3B30",
+              selectedDayBackgroundColor: Colors[colorScheme ?? "light"].tint,
+              todayTextColor: Colors[colorScheme ?? "light"].tint,
+              arrowColor: Colors[colorScheme ?? "light"].tint,
               selectedDayTextColor: "#ffffff",
               dayTextColor: Colors[colorScheme ?? "light"].text,
               textDisabledColor: Colors[colorScheme ?? "light"].icon,
@@ -406,7 +411,7 @@ export default function CalendarScreen() {
           <View
             style={[
               styles.dayHeader,
-              { borderColor: isDark ? "#333333" : "#E5E5E5" },
+              { borderColor: isDark ? `${burntCopper}80` : `${burntCopper}40` },
             ]}
           >
             <Text
@@ -432,7 +437,11 @@ export default function CalendarScreen() {
                     key={`grid-${index}`}
                     style={[
                       styles.gridLine,
-                      { borderBottomColor: isDark ? "#333333" : "#E5E5E5" },
+                      {
+                        borderBottomColor: isDark
+                          ? `${burntCopper}30`
+                          : `${burntCopper}20`,
+                      },
                     ]}
                   />
                 ))}
@@ -448,8 +457,18 @@ export default function CalendarScreen() {
                     },
                   ]}
                 >
-                  <View style={styles.currentTimeDot} />
-                  <View style={styles.currentTimeLine} />
+                  <View
+                    style={[
+                      styles.currentTimeDot,
+                      { backgroundColor: Colors[colorScheme ?? "light"].tint },
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.currentTimeLine,
+                      { backgroundColor: Colors[colorScheme ?? "light"].tint },
+                    ]}
+                  />
                 </View>
               )}
 
@@ -477,14 +496,22 @@ export default function CalendarScreen() {
                   <View
                     style={[
                       styles.hourSlot,
-                      { borderBottomColor: isDark ? "#333333" : "#E5E5E5" },
+                      {
+                        borderBottomColor: isDark
+                          ? `${burntCopper}30`
+                          : `${burntCopper}20`,
+                      },
                     ]}
                   >
                     {/* Half-hour line */}
                     <View
                       style={[
                         styles.halfHourLine,
-                        { borderTopColor: isDark ? "#262626" : "#F0F0F0" },
+                        {
+                          borderTopColor: isDark
+                            ? `${burntCopper}20`
+                            : `${burntCopper}15`,
+                        },
                       ]}
                     />
                   </View>
@@ -525,7 +552,7 @@ export default function CalendarScreen() {
           <Text
             style={[
               styles.tabBarText,
-              { color: isDark ? "#FF2D55" : "#FF3B30" },
+              { color: Colors[colorScheme ?? "light"].tint },
             ]}
           >
             Today
@@ -734,7 +761,7 @@ const styles = StyleSheet.create({
   },
   gridLine: {
     height: 60,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0.5,
     width: "100%",
   },
   hourRow: {
@@ -759,7 +786,7 @@ const styles = StyleSheet.create({
   },
   hourSlot: {
     flex: 1,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0.5,
     minHeight: 1,
     position: "relative",
   },
@@ -895,14 +922,12 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "#FF3B30",
     marginLeft: 46,
     marginRight: -4,
   },
   currentTimeLine: {
     flex: 1,
     height: 1,
-    backgroundColor: "#FF3B30",
     marginRight: 10,
   },
   halfHourLine: {
@@ -910,6 +935,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     top: 30,
-    borderTopWidth: 1,
+    borderTopWidth: 0.5,
   },
 });
