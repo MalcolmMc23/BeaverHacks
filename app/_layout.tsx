@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
-import { useColorScheme } from 'react-native';
+import { useColorScheme, Animated } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
@@ -13,6 +13,7 @@ SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null);
+  const [fadeAnim] = useState(new Animated.Value(1));
   const colorScheme = useColorScheme();
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
@@ -22,11 +23,14 @@ export default function RootLayout() {
     initializeApp();
   }, []);
 
+  // Add a function to reset fade animation
+  const resetFadeAnimation = () => {
+    fadeAnim.setValue(1);
+  };
+
   const initializeApp = async () => {
     try {
-      // Clear onboarding state (remove this in production)
-      await AsyncStorage.clear();
-      
+      resetFadeAnimation(); // Reset fade animation when initializing
       const hasCompletedOnboarding = await AsyncStorage.getItem('hasCompletedOnboarding');
       setShowOnboarding(hasCompletedOnboarding !== 'true');
       
@@ -41,11 +45,19 @@ export default function RootLayout() {
 
   const handleOnboardingComplete = async () => {
     try {
-      await AsyncStorage.multiSet([
-        ['hasCompletedOnboarding', 'true'],
-        ['onboardingTimestamp', new Date().toISOString()],
-      ]);
-      setShowOnboarding(false);
+      // Start fade out animation
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: true,
+      }).start(async () => {
+        // After fade out completes, update the state
+        await AsyncStorage.multiSet([
+          ['hasCompletedOnboarding', 'true'],
+          ['onboardingTimestamp', new Date().toISOString()],
+        ]);
+        setShowOnboarding(false);
+      });
     } catch (error) {
       console.error('Error saving onboarding status:', error);
     }
@@ -56,7 +68,11 @@ export default function RootLayout() {
   }
 
   if (showOnboarding) {
-    return <Onboarding onComplete={handleOnboardingComplete} />;
+    return (
+      <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
+        <Onboarding onComplete={handleOnboardingComplete} />
+      </Animated.View>
+    );
   }
 
   return (

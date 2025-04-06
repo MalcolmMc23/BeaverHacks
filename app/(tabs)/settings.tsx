@@ -1,11 +1,13 @@
 import { StyleSheet } from "react-native";
-import { Text, View, SafeAreaView, TouchableOpacity } from "react-native";
+import { Text, View, SafeAreaView, TouchableOpacity, Alert } from "react-native";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { Colors } from "@/constants/Colors";
 import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
 import { ManageLockedAppsModal } from "@/components/ManageLockedAppsModal";
 import { IconSymbol } from "@/components/ui/IconSymbol";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { router } from 'expo-router';
 
 type ColorSchemeType = "light" | "dark";
 
@@ -13,6 +15,30 @@ export default function SettingsScreen() {
   const colorScheme = useColorScheme();
   const theme = (colorScheme ?? "light") as ColorSchemeType;
   const [showLockedAppsModal, setShowLockedAppsModal] = useState(false);
+
+  const handleRedoOnboarding = async () => {
+    try {
+      Alert.alert(
+        "Restart Onboarding",
+        "This will restart the app to show the onboarding screens. Continue?",
+        [
+          {
+            text: "Cancel",
+            style: "cancel"
+          },
+          {
+            text: "Continue",
+            onPress: async () => {
+              await AsyncStorage.multiRemove(['hasCompletedOnboarding', 'onboardingTimestamp']);
+              router.replace('/');
+            }
+          }
+        ]
+      );
+    } catch (error) {
+      console.error("Error resetting onboarding:", error);
+    }
+  };
 
   return (
     <SafeAreaView
@@ -57,7 +83,37 @@ export default function SettingsScreen() {
             />
           </TouchableOpacity>
 
-          {/* Additional settings items can be added here */}
+          <TouchableOpacity
+            style={[
+              styles.settingItem,
+              { borderColor: colorScheme === "dark" ? "#333" : "#e0e0e0" },
+            ]}
+            onPress={handleRedoOnboarding}
+          >
+            <View style={styles.settingInfo}>
+              <IconSymbol name="arrow.clockwise" size={24} color={Colors[theme].tint} />
+              <View style={styles.settingTextContainer}>
+                <Text
+                  style={[styles.settingTitle, { color: Colors[theme].text }]}
+                >
+                  Redo Onboarding
+                </Text>
+                <Text
+                  style={[
+                    styles.settingDescription,
+                    { color: Colors[theme].icon },
+                  ]}
+                >
+                  Change your preferences and rest days
+                </Text>
+              </View>
+            </View>
+            <IconSymbol
+              name="chevron.right"
+              size={20}
+              color={Colors[theme].icon}
+            />
+          </TouchableOpacity>
         </View>
       </View>
 
