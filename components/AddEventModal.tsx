@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -9,15 +9,15 @@ import {
   Platform,
   ScrollView,
   Modal,
-} from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+} from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
 
-import { ThemedView } from './ThemedView';
-import { ThemedText } from './ThemedText';
-import { IconSymbol } from './ui/IconSymbol';
-import { Colors } from '@/constants/Colors';
+import { ThemedView } from "./ThemedView";
+import { ThemedText } from "./ThemedText";
+import { IconSymbol } from "./ui/IconSymbol";
+import { Colors } from "@/constants/Colors";
 
-type ImportanceLevel = 'low' | 'medium' | 'high' | 'urgent';
+type ImportanceLevel = "low" | "medium" | "high" | "urgent";
 
 type NotificationTime = {
   label: string;
@@ -25,14 +25,14 @@ type NotificationTime = {
 };
 
 const notificationOptions: NotificationTime[] = [
-  { label: 'At time of event', value: 0 },
-  { label: '5 minutes before', value: 5 },
-  { label: '10 minutes before', value: 10 },
-  { label: '15 minutes before', value: 15 },
-  { label: '30 minutes before', value: 30 },
-  { label: '1 hour before', value: 60 },
-  { label: '2 hours before', value: 120 },
-  { label: 'Custom', value: -1 },
+  { label: "At time of event", value: 0 },
+  { label: "5 minutes before", value: 5 },
+  { label: "10 minutes before", value: 10 },
+  { label: "15 minutes before", value: 15 },
+  { label: "30 minutes before", value: 30 },
+  { label: "1 hour before", value: 60 },
+  { label: "2 hours before", value: 120 },
+  { label: "Custom", value: -1 },
 ];
 
 type AddEventModalProps = {
@@ -48,28 +48,48 @@ type AddEventModalProps = {
     showAs?: string;
     importance: ImportanceLevel;
   }) => void;
+  initialData?: {
+    startDate?: Date;
+    endDate?: Date;
+    title?: string;
+  };
 };
 
-export function AddEventModal({ onCancel, onAdd }: AddEventModalProps) {
-  const [title, setTitle] = useState('');
-  const [location, setLocation] = useState('');
+export function AddEventModal({
+  onCancel,
+  onAdd,
+  initialData,
+}: AddEventModalProps) {
+  const [title, setTitle] = useState(initialData?.title || "");
+  const [location, setLocation] = useState("");
   const [isAllDay, setIsAllDay] = useState(false);
-  const [startDate, setStartDate] = useState(new Date());
-  const [endDate, setEndDate] = useState(new Date(Date.now() + 60 * 60 * 1000));
-  const [description, setDescription] = useState('');
-  const [notification, setNotification] = useState<NotificationTime>(notificationOptions[0]);
-  const [showAs, setShowAs] = useState('Busy');
-  const [importance, setImportance] = useState<ImportanceLevel>('low');
+  const [startDate, setStartDate] = useState(
+    initialData?.startDate || new Date()
+  );
+  const [endDate, setEndDate] = useState(
+    initialData?.endDate || new Date(Date.now() + 60 * 60 * 1000)
+  );
+  const [description, setDescription] = useState("");
+  const [notification, setNotification] = useState<NotificationTime>(
+    notificationOptions[0]
+  );
+  const [showAs, setShowAs] = useState("Busy");
+  const [importance, setImportance] = useState<ImportanceLevel>("low");
   const [showImportanceModal, setShowImportanceModal] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
-  const [customMinutes, setCustomMinutes] = useState('');
+  const [customMinutes, setCustomMinutes] = useState("");
   const [showCustomInput, setShowCustomInput] = useState(false);
 
-  const importanceLevels: ImportanceLevel[] = ['low', 'medium', 'high', 'urgent'];
+  const importanceLevels: ImportanceLevel[] = [
+    "low",
+    "medium",
+    "high",
+    "urgent",
+  ];
 
   const handleAdd = () => {
     if (!title.trim()) return;
-    
+
     onAdd({
       title,
       location,
@@ -128,7 +148,12 @@ export function AddEventModal({ onCancel, onAdd }: AddEventModalProps) {
       }}
     >
       <View style={styles.importanceRow}>
-        <View style={[styles.importanceColor, { backgroundColor: Colors.light.importance[level] }]} />
+        <View
+          style={[
+            styles.importanceColor,
+            { backgroundColor: Colors.light.importance[level] },
+          ]}
+        />
         <ThemedText style={styles.importanceText}>
           {level.charAt(0).toUpperCase() + level.slice(1)}
         </ThemedText>
@@ -147,7 +172,12 @@ export function AddEventModal({ onCancel, onAdd }: AddEventModalProps) {
         </TouchableOpacity>
         <ThemedText style={styles.headerTitle}>New</ThemedText>
         <TouchableOpacity onPress={handleAdd}>
-          <ThemedText style={[styles.addButton, title.trim() ? styles.addButtonEnabled : null]}>
+          <ThemedText
+            style={[
+              styles.addButton,
+              title.trim() ? styles.addButtonEnabled : null,
+            ]}
+          >
             Add
           </ThemedText>
         </TouchableOpacity>
@@ -174,15 +204,15 @@ export function AddEventModal({ onCancel, onAdd }: AddEventModalProps) {
         <View style={styles.timeGroup}>
           <View style={styles.switchRow}>
             <ThemedText style={styles.label}>All-day</ThemedText>
-            <Switch 
-              value={isAllDay} 
+            <Switch
+              value={isAllDay}
               onValueChange={setIsAllDay}
               trackColor={{ false: Colors.light.icon, true: Colors.light.tint }}
               thumbColor={Colors.light.background}
               ios_backgroundColor={Colors.light.icon}
             />
           </View>
-          
+
           <View style={styles.dateRow}>
             <ThemedText style={styles.dateLabel}>Starts</ThemedText>
             <View style={styles.datePickerContainer}>
@@ -211,7 +241,7 @@ export function AddEventModal({ onCancel, onAdd }: AddEventModalProps) {
         </View>
 
         <View style={styles.optionsGroup}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.optionRow}
             onPress={() => setShowNotificationModal(true)}
           >
@@ -220,7 +250,11 @@ export function AddEventModal({ onCancel, onAdd }: AddEventModalProps) {
               <ThemedText style={styles.optionValueText}>
                 {notification.label}
               </ThemedText>
-              <IconSymbol name="chevron.right" size={20} color={Colors.light.icon} />
+              <IconSymbol
+                name="chevron.right"
+                size={20}
+                color={Colors.light.icon}
+              />
             </View>
           </TouchableOpacity>
 
@@ -228,23 +262,36 @@ export function AddEventModal({ onCancel, onAdd }: AddEventModalProps) {
             <ThemedText style={styles.label}>Show As</ThemedText>
             <View style={styles.optionValue}>
               <ThemedText style={styles.optionValueText}>{showAs}</ThemedText>
-              <IconSymbol name="chevron.right" size={20} color={Colors.light.icon} />
+              <IconSymbol
+                name="chevron.right"
+                size={20}
+                color={Colors.light.icon}
+              />
             </View>
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.importanceGroup}
           onPress={() => setShowImportanceModal(true)}
         >
           <View style={styles.importanceHeader}>
             <ThemedText style={styles.label}>Importance</ThemedText>
             <View style={styles.importanceValue}>
-              <View style={[styles.importanceColor, { backgroundColor: Colors.light.importance[importance] }]} />
+              <View
+                style={[
+                  styles.importanceColor,
+                  { backgroundColor: Colors.light.importance[importance] },
+                ]}
+              />
               <ThemedText style={styles.importanceValueText}>
                 {importance.charAt(0).toUpperCase() + importance.slice(1)}
               </ThemedText>
-              <IconSymbol name="chevron.right" size={20} color={Colors.light.icon} />
+              <IconSymbol
+                name="chevron.right"
+                size={20}
+                color={Colors.light.icon}
+              />
             </View>
           </View>
         </TouchableOpacity>
@@ -265,14 +312,16 @@ export function AddEventModal({ onCancel, onAdd }: AddEventModalProps) {
         animationType="slide"
         onRequestClose={() => setShowNotificationModal(false)}
       >
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}
           onPress={() => setShowNotificationModal(false)}
         >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <ThemedText style={styles.modalTitle}>Push Notification</ThemedText>
+              <ThemedText style={styles.modalTitle}>
+                Push Notification
+              </ThemedText>
             </View>
             {showCustomInput ? (
               <View style={styles.customInputContainer}>
@@ -284,11 +333,13 @@ export function AddEventModal({ onCancel, onAdd }: AddEventModalProps) {
                   keyboardType="number-pad"
                   placeholderTextColor={Colors.light.icon}
                 />
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.customInputButton}
                   onPress={handleCustomNotification}
                 >
-                  <ThemedText style={styles.customInputButtonText}>Set</ThemedText>
+                  <ThemedText style={styles.customInputButtonText}>
+                    Set
+                  </ThemedText>
                 </TouchableOpacity>
               </View>
             ) : (
@@ -304,14 +355,16 @@ export function AddEventModal({ onCancel, onAdd }: AddEventModalProps) {
         animationType="slide"
         onRequestClose={() => setShowImportanceModal(false)}
       >
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}
           onPress={() => setShowImportanceModal(false)}
         >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <ThemedText style={styles.modalTitle}>Select Importance</ThemedText>
+              <ThemedText style={styles.modalTitle}>
+                Select Importance
+              </ThemedText>
             </View>
             {importanceLevels.map(renderImportanceOption)}
           </View>
@@ -327,16 +380,16 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.background,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: 16,
-    paddingTop: Platform.OS === 'ios' ? 60 : 16,
+    paddingTop: Platform.OS === "ios" ? 60 : 16,
     backgroundColor: Colors.light.background,
   },
   headerTitle: {
     fontSize: 17,
-    fontWeight: '600',
+    fontWeight: "600",
     color: Colors.light.text,
   },
   cancelButton: {
@@ -386,14 +439,14 @@ const styles = StyleSheet.create({
     borderColor: Colors.light.icon,
   },
   switchRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 16,
   },
   dateRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 16,
   },
   dateLabel: {
@@ -416,16 +469,16 @@ const styles = StyleSheet.create({
     borderColor: Colors.light.icon,
   },
   optionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: 16,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: Colors.light.icon,
   },
   optionValue: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   optionValueText: {
     marginRight: 8,
@@ -440,14 +493,14 @@ const styles = StyleSheet.create({
     borderColor: Colors.light.icon,
   },
   importanceHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: 16,
   },
   importanceValue: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   importanceValueText: {
     marginHorizontal: 8,
@@ -461,14 +514,14 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
   },
   modalContent: {
     backgroundColor: Colors.light.background,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+    paddingBottom: Platform.OS === "ios" ? 40 : 20,
   },
   modalHeader: {
     padding: 16,
@@ -477,21 +530,21 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 17,
-    fontWeight: '600',
-    textAlign: 'center',
+    fontWeight: "600",
+    textAlign: "center",
     color: Colors.light.text,
   },
   importanceOption: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: 16,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: Colors.light.icon,
   },
   importanceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   importanceText: {
     marginLeft: 12,
@@ -510,9 +563,9 @@ const styles = StyleSheet.create({
     borderColor: Colors.light.icon,
   },
   optionItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: 16,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: Colors.light.icon,
@@ -523,8 +576,8 @@ const styles = StyleSheet.create({
   },
   customInputContainer: {
     padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: Colors.light.icon,
   },
@@ -546,8 +599,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   customInputButtonText: {
-    color: '#FFF',
+    color: "#FFF",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
-}); 
+});

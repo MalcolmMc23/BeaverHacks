@@ -6,6 +6,11 @@ import {
   Modal,
   TextInput,
   Dimensions,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
+  PanResponder,
+  GestureResponderEvent,
+  PanResponderGestureState,
 } from "react-native";
 import React from "react";
 import { Text, View, SafeAreaView } from "react-native";
@@ -17,6 +22,8 @@ import { IconSymbol } from "@/components/ui/IconSymbol";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { AddEventModal } from "@/components/AddEventModal";
 import { EditEventModal } from "@/components/EditEventModal";
+import * as Haptics from "expo-haptics";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 
 // Move these constants to top level
 const burntCopper = "#A0430A"; // Primary accent color from constants
@@ -109,6 +116,28 @@ export default function CalendarScreen() {
   const [markedDates, setMarkedDates] = useState<MarkedDatesState>({});
   const scrollViewRef = useRef<ScrollView>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("day"); // Default to day view like in the screenshot
+  const [initialEventData, setInitialEventData] = useState<any>(null);
+  const [scrollOffset, setScrollOffset] = useState(0);
+  const [previewEvent, setPreviewEvent] = useState<{
+    visible: boolean;
+    top: number;
+    duration: number;
+    color: string;
+  } | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragEvent, setDragEvent] = useState<{
+    visible: boolean;
+    startY: number;
+    color: string;
+  }>({
+    visible: false,
+    startY: 0,
+    color: getRandomColor(),
+  });
+  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(
+    null
+  );
+  const LONG_PRESS_DURATION = 1200; // 1.2 seconds to trigger event creation modal
 
   const onDayPress = (day: DateData) => {
     setSelectedDate(day.dateString);
@@ -150,7 +179,7 @@ export default function CalendarScreen() {
       end: eventData.endDate,
       location: eventData.location,
       description: eventData.description,
-      color: getRandomColor(),
+      color: dragEvent.visible ? dragEvent.color : getRandomColor(),
       isAllDay: eventData.isAllDay,
       alert: eventData.alert,
       showAs: eventData.showAs,
@@ -172,7 +201,18 @@ export default function CalendarScreen() {
       },
     }));
 
+    // Reset any drag event state if it exists
+    if (dragEvent.visible) {
+      setDragEvent({
+        visible: false,
+        startY: 0,
+        color: getRandomColor(),
+      });
+      setIsDragging(false);
+    }
+
     setModalVisible(false);
+    setInitialEventData(null);
   };
 
   const handleEditEvent = (eventData: {
@@ -284,6 +324,20 @@ export default function CalendarScreen() {
     };
   };
 
+  // Get time from Y position in the timeline
+  const getTimeFromPosition = (yPosition: number) => {
+    // Calculate hour and minute from y position
+    const hour = Math.floor(yPosition / 60);
+    const minute = Math.round((yPosition % 60) / 15) * 15; // Round to nearest 15 min
+
+    // Create date object at the selected date with the calculated time
+    const date = new Date(selectedDate);
+    date.setHours(hour);
+    date.setMinutes(minute);
+
+    return date;
+  };
+
   const currentMonth = new Date(selectedDate).toLocaleString("default", {
     month: "long",
     year: "numeric",
@@ -305,6 +359,112 @@ export default function CalendarScreen() {
   const toggleViewMode = () => {
     setViewMode(viewMode === "day" ? "month" : "day");
   };
+
+  // Handle scroll events to track scroll position
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    setScrollOffset(event.nativeEvent.contentOffset.y);
+  };
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        const { dx, dy } = gestureState;
+        return Math.abs(dx) < 5 && Math.abs(dy) < 5;
+      },
+      onPanResponderGrant: (event: GestureResponderEvent) => {
+        const { locationY } = event.nativeEvent;
+        const yPosition = locationY + scrollOffset;
+
+        const timer = setTimeout(() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+          setDragEvent({
+            visible: true,
+            startY: yPosition,
+            color: getRandomColor(),
+          });
+
+          setIsDragging(true);
+
+          const modalTimer = setTimeout(() => {
+            const startTime = getTimeFromPosition(dragEvent.startY);
+
+            const endTime = new Date(startTime);
+            endTime.setHours(endTime.getHours() + 1);
+
+            setInitialEventData({
+              startDate: startTime,
+              endDate: endTime,
+            });
+
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+            setModalVisible(true);
+
+            setLongPressTimer(null);
+          }, LONG_PRESS_DURATION);
+
+          setLongPressTimer(modalTimer);
+        }, 200);
+
+        setLongPressTimer(timer);
+      },
+      onPanResponderMove: (event: GestureResponderEvent, gestureState) => {
+        if (!dragEvent.visible) return;
+
+        // If significant vertical movement is detected and a drag hasn't been initiated,
+        // this is likely a scroll attempt - terminate the pending event creation
+        if (Math.abs(gestureState.dy) > 15 && !isDragging) {
+          if (longPressTimer) {
+            clearTimeout(longPressTimer);
+            setLongPressTimer(null);
+          }
+          return;
+        }
+
+        // Update event position as user drags
+        const { locationY } = event.nativeEvent;
+        const yPosition = locationY + scrollOffset;
+
+        // Snap to 5-minute increments
+        const snappedY = Math.round(yPosition / 5) * 5;
+
+        setDragEvent((prev) => ({
+          ...prev,
+          startY: snappedY,
+        }));
+      },
+      onPanResponderRelease: () => {
+        if (longPressTimer) {
+          clearTimeout(longPressTimer);
+          setLongPressTimer(null);
+        }
+
+        if (!modalVisible) {
+          setDragEvent({
+            visible: false,
+            startY: 0,
+            color: getRandomColor(),
+          });
+          setIsDragging(false);
+        }
+      },
+      onPanResponderTerminate: () => {
+        if (longPressTimer) {
+          clearTimeout(longPressTimer);
+          setLongPressTimer(null);
+        }
+
+        setDragEvent({
+          visible: false,
+          startY: 0,
+          color: getRandomColor(),
+        });
+        setIsDragging(false);
+      },
+    })
+  ).current;
 
   return (
     <SafeAreaView
@@ -475,6 +635,9 @@ export default function CalendarScreen() {
             ref={scrollViewRef}
             style={styles.timelineContainer}
             showsVerticalScrollIndicator={false}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+            scrollEnabled={true} // Always allow scrolling
           >
             <View style={styles.timelineContent}>
               {/* Hour grid background - this will make all lines more visible */}
@@ -493,6 +656,46 @@ export default function CalendarScreen() {
                   />
                 ))}
               </View>
+
+              {/* Touch area for long press to add event */}
+              <View
+                {...panResponder.panHandlers}
+                style={styles.timelineTouchArea}
+              />
+
+              {/* Event being created via drag */}
+              {dragEvent.visible && (
+                <View
+                  style={[
+                    styles.eventItem,
+                    {
+                      top: dragEvent.startY,
+                      height: 60, // Fixed 1-hour height (60 minutes)
+                      backgroundColor: dragEvent.color,
+                      opacity: 0.8,
+                      borderWidth: 2,
+                      borderColor: "white",
+                      zIndex: 100,
+                    },
+                  ]}
+                >
+                  <Text style={styles.eventTitle} numberOfLines={1}>
+                    New Event
+                  </Text>
+                  <Text style={styles.eventTime} numberOfLines={1}>
+                    {formatTime(getTimeFromPosition(dragEvent.startY))} -
+                    {formatTime(
+                      (() => {
+                        const eventEndTime = new Date(
+                          getTimeFromPosition(dragEvent.startY)
+                        );
+                        eventEndTime.setHours(eventEndTime.getHours() + 1);
+                        return eventEndTime;
+                      })()
+                    )}
+                  </Text>
+                </View>
+              )}
 
               {/* Current time indicator - visible red line */}
               {selectedDate === new Date().toISOString().split("T")[0] && (
@@ -615,11 +818,18 @@ export default function CalendarScreen() {
         animationType="slide"
         transparent={true}
         visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
+        onRequestClose={() => {
+          setModalVisible(false);
+          setInitialEventData(null);
+        }}
       >
         <AddEventModal
-          onCancel={() => setModalVisible(false)}
+          onCancel={() => {
+            setModalVisible(false);
+            setInitialEventData(null);
+          }}
           onAdd={handleAddEvent}
+          initialData={initialEventData}
         />
       </Modal>
 
@@ -913,5 +1123,63 @@ const styles = StyleSheet.create({
     right: 0,
     top: 30,
     borderTopWidth: 0.5,
+  },
+  timelineTouchArea: {
+    position: "absolute",
+    left: 50, // Match the left edge of the events
+    right: 0,
+    top: 0,
+    bottom: 0,
+    zIndex: 40, // Below events but above time grid
+  },
+  previewEvent: {
+    opacity: 0.8,
+    borderWidth: 2,
+    borderColor: "white",
+    zIndex: 100,
+    justifyContent: "space-between",
+    padding: 8,
+  },
+  confirmEventButton: {
+    position: "absolute",
+    right: 8,
+    top: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.3)",
+  },
+  cancelEventButton: {
+    position: "absolute",
+    left: 8,
+    top: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.3)",
+  },
+  resizeHandle: {
+    position: "absolute",
+    left: 10,
+    right: 10,
+    height: 24,
+    zIndex: 101,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  resizeHandleBar: {
+    width: 40,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: "white",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+    elevation: 3,
   },
 });
