@@ -17,21 +17,35 @@ const importanceColors = {
 
 export const Colors = {
   light: {
-    text: '#11181C',
-    background: seaMist,
-    tint: burntCopper,
-    icon: '#687076',
-    tabIconDefault: '#687076',
-    tabIconSelected: burntCopper,
-    importance: importanceColors,
+    text: '#000',
+    background: '#fff',
+    tint: '#A0430A',
+    icon: '#999',
+    tabIconDefault: '#ccc',
+    tabIconSelected: '#A0430A',
+    border: '#E1E1E1',
+    importance: {
+      low: '#4CAF50',
+      medium: '#FFC107',
+      high: '#FF9800',
+      urgent: '#F44336',
+    },
   },
   dark: {
-    text: '#ECEDEE',
-    background: '#151718',
-    tint: burntCopper,
-    icon: seaMist,
-    tabIconDefault: seaMist,
-    tabIconSelected: burntCopper,
-    importance: importanceColors,
+    text: '#fff',
+    background: '#000',
+    tint: '#A0430A',
+    icon: '#fff',
+    tabIconDefault: '#ccc',
+    tabIconSelected: '#A0430A',
+    border: '#333',
+    importance: {
+      low: '#4CAF50',
+      medium: '#FFC107',
+      high: '#FF9800',
+      urgent: '#F44336',
+    },
   },
-};
+} as const;
+
+export type ColorScheme = typeof Colors.light & typeof Colors.dark;
