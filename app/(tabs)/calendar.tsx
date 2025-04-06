@@ -9,7 +9,6 @@ import {
 } from "react-native";
 import React from "react";
 import { Text, View, SafeAreaView } from "react-native";
-import { useColorScheme } from "@/hooks/useColorScheme";
 import { Colors } from "@/constants/Colors";
 import { StatusBar } from "expo-status-bar";
 import { Calendar, DateData } from "react-native-calendars";
@@ -78,6 +77,7 @@ const HOURS = [
   "9",
   "10",
   "11",
+  "12", // Add 12 AM for the next day
 ];
 
 const getRandomColor = () =>
@@ -86,8 +86,9 @@ const getRandomColor = () =>
 type ViewMode = "day" | "month";
 
 export default function CalendarScreen() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
+  // Always use light mode
+  const colorScheme = "light";
+  const isDark = false;
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().split("T")[0]
   );
@@ -108,7 +109,7 @@ export default function CalendarScreen() {
     setMarkedDates({
       [day.dateString]: {
         selected: true,
-        selectedColor: isDark ? "#FF2D55" : "#FF3B30",
+        selectedColor: "#FF3B30", // Always use light mode color
       },
     });
 
@@ -150,7 +151,7 @@ export default function CalendarScreen() {
       [selectedDate]: {
         ...prevMarkedDates[selectedDate],
         marked: true,
-        dots: [{ color: isDark ? "#FF2D55" : "#FF3B30" }],
+        dots: [{ color: "#FF3B30" }], // Always use light mode color
       },
     }));
 
@@ -164,6 +165,7 @@ export default function CalendarScreen() {
   };
 
   const formatAMPM = (hour: number) => {
+    if (hour === 24) return "AM"; // For the 12 AM of next day
     return hour < 12 ? "AM" : "PM";
   };
 
@@ -211,10 +213,10 @@ export default function CalendarScreen() {
     <SafeAreaView
       style={[
         styles.container,
-        { backgroundColor: Colors[colorScheme ?? "light"].background },
+        { backgroundColor: Colors["light"].background },
       ]}
     >
-      <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
+      <StatusBar style="dark" />
 
       <View style={styles.header}>
         <View style={styles.headerLeft}>
@@ -222,13 +224,10 @@ export default function CalendarScreen() {
             <IconSymbol
               name="chevron.left"
               size={24}
-              color={Colors[colorScheme ?? "light"].tint}
+              color={Colors["light"].tint}
             />
             <Text
-              style={[
-                styles.headerButtonText,
-                { color: Colors[colorScheme ?? "light"].tint },
-              ]}
+              style={[styles.headerButtonText, { color: Colors["light"].tint }]}
             >
               {new Date().getMonth() === new Date(selectedDate).getMonth()
                 ? "Today"
@@ -236,12 +235,7 @@ export default function CalendarScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-        <Text
-          style={[
-            styles.headerTitle,
-            { color: Colors[colorScheme ?? "light"].tint },
-          ]}
-        >
+        <Text style={[styles.headerTitle, { color: Colors["light"].tint }]}>
           {currentMonth.split(" ")[0]} {/* Just show month name */}
         </Text>
         <View style={styles.headerRight}>
@@ -252,25 +246,21 @@ export default function CalendarScreen() {
             <IconSymbol
               name={viewMode === "day" ? "calendar" : "clock"}
               size={22}
-              color={Colors[colorScheme ?? "light"].tint}
+              color={Colors["light"].tint}
             />
           </TouchableOpacity>
           <TouchableOpacity style={styles.headerIconButton}>
             <IconSymbol
               name="magnifyingglass"
               size={22}
-              color={Colors[colorScheme ?? "light"].tint}
+              color={Colors["light"].tint}
             />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.headerIconButton}
             onPress={() => setModalVisible(true)}
           >
-            <IconSymbol
-              name="plus"
-              size={22}
-              color={Colors[colorScheme ?? "light"].tint}
-            />
+            <IconSymbol name="plus" size={22} color={Colors["light"].tint} />
           </TouchableOpacity>
         </View>
       </View>
@@ -279,75 +269,40 @@ export default function CalendarScreen() {
         // Month View
         <View style={styles.monthViewContainer}>
           <View style={styles.weekDays}>
-            <Text
-              style={[
-                styles.weekDayText,
-                { color: Colors[colorScheme ?? "light"].text },
-              ]}
-            >
+            <Text style={[styles.weekDayText, { color: Colors["light"].text }]}>
               S
             </Text>
-            <Text
-              style={[
-                styles.weekDayText,
-                { color: Colors[colorScheme ?? "light"].text },
-              ]}
-            >
+            <Text style={[styles.weekDayText, { color: Colors["light"].text }]}>
               M
             </Text>
-            <Text
-              style={[
-                styles.weekDayText,
-                { color: Colors[colorScheme ?? "light"].text },
-              ]}
-            >
+            <Text style={[styles.weekDayText, { color: Colors["light"].text }]}>
               T
             </Text>
-            <Text
-              style={[
-                styles.weekDayText,
-                { color: Colors[colorScheme ?? "light"].text },
-              ]}
-            >
+            <Text style={[styles.weekDayText, { color: Colors["light"].text }]}>
               W
             </Text>
-            <Text
-              style={[
-                styles.weekDayText,
-                { color: Colors[colorScheme ?? "light"].text },
-              ]}
-            >
+            <Text style={[styles.weekDayText, { color: Colors["light"].text }]}>
               T
             </Text>
-            <Text
-              style={[
-                styles.weekDayText,
-                { color: Colors[colorScheme ?? "light"].text },
-              ]}
-            >
+            <Text style={[styles.weekDayText, { color: Colors["light"].text }]}>
               F
             </Text>
-            <Text
-              style={[
-                styles.weekDayText,
-                { color: Colors[colorScheme ?? "light"].text },
-              ]}
-            >
+            <Text style={[styles.weekDayText, { color: Colors["light"].text }]}>
               S
             </Text>
           </View>
 
           <Calendar
             theme={{
-              calendarBackground: Colors[colorScheme ?? "light"].background,
-              textSectionTitleColor: Colors[colorScheme ?? "light"].text,
-              selectedDayBackgroundColor: Colors[colorScheme ?? "light"].tint,
-              todayTextColor: Colors[colorScheme ?? "light"].tint,
-              arrowColor: Colors[colorScheme ?? "light"].tint,
+              calendarBackground: Colors["light"].background,
+              textSectionTitleColor: Colors["light"].text,
+              selectedDayBackgroundColor: Colors["light"].tint,
+              todayTextColor: Colors["light"].tint,
+              arrowColor: Colors["light"].tint,
               selectedDayTextColor: "#ffffff",
-              dayTextColor: Colors[colorScheme ?? "light"].text,
-              textDisabledColor: Colors[colorScheme ?? "light"].icon,
-              monthTextColor: Colors[colorScheme ?? "light"].text,
+              dayTextColor: Colors["light"].text,
+              textDisabledColor: Colors["light"].icon,
+              monthTextColor: Colors["light"].text,
               "stylesheet.calendar.header": {
                 header: {
                   height: 0,
@@ -367,7 +322,7 @@ export default function CalendarScreen() {
             <Text
               style={[
                 styles.monthViewEventsTitle,
-                { color: Colors[colorScheme ?? "light"].text },
+                { color: Colors["light"].text },
               ]}
             >
               Events for {new Date(selectedDate).toLocaleDateString()}
@@ -394,10 +349,7 @@ export default function CalendarScreen() {
                 ))
               ) : (
                 <Text
-                  style={[
-                    styles.noEvents,
-                    { color: Colors[colorScheme ?? "light"].icon },
-                  ]}
+                  style={[styles.noEvents, { color: Colors["light"].icon }]}
                 >
                   No events for this day
                 </Text>
@@ -415,10 +367,7 @@ export default function CalendarScreen() {
             ]}
           >
             <Text
-              style={[
-                styles.dayHeaderText,
-                { color: Colors[colorScheme ?? "light"].text },
-              ]}
+              style={[styles.dayHeaderText, { color: Colors["light"].text }]}
             >
               {selectedDayName} — {selectedDayFormatted}
             </Text>
@@ -460,13 +409,13 @@ export default function CalendarScreen() {
                   <View
                     style={[
                       styles.currentTimeDot,
-                      { backgroundColor: Colors[colorScheme ?? "light"].tint },
+                      { backgroundColor: Colors["light"].tint },
                     ]}
                   />
                   <View
                     style={[
                       styles.currentTimeLine,
-                      { backgroundColor: Colors[colorScheme ?? "light"].tint },
+                      { backgroundColor: Colors["light"].tint },
                     ]}
                   />
                 </View>
@@ -479,16 +428,13 @@ export default function CalendarScreen() {
                     <Text
                       style={[
                         styles.hourLabel,
-                        { color: Colors[colorScheme ?? "light"].icon },
+                        { color: Colors["light"].icon },
                       ]}
                     >
                       {hour}
                     </Text>
                     <Text
-                      style={[
-                        styles.ampm,
-                        { color: Colors[colorScheme ?? "light"].icon },
-                      ]}
+                      style={[styles.ampm, { color: Colors["light"].icon }]}
                     >
                       {hour !== "Noon" ? formatAMPM(index) : ""}
                     </Text>
@@ -549,32 +495,17 @@ export default function CalendarScreen() {
 
       <View style={styles.tabBar}>
         <TouchableOpacity style={styles.tabBarButton}>
-          <Text
-            style={[
-              styles.tabBarText,
-              { color: Colors[colorScheme ?? "light"].tint },
-            ]}
-          >
+          <Text style={[styles.tabBarText, { color: Colors["light"].tint }]}>
             Today
           </Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.tabBarButton}>
-          <Text
-            style={[
-              styles.tabBarText,
-              { color: Colors[colorScheme ?? "light"].text },
-            ]}
-          >
+          <Text style={[styles.tabBarText, { color: Colors["light"].text }]}>
             Calendars
           </Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.tabBarButton}>
-          <Text
-            style={[
-              styles.tabBarText,
-              { color: Colors[colorScheme ?? "light"].text },
-            ]}
-          >
+          <Text style={[styles.tabBarText, { color: Colors["light"].text }]}>
             Inbox (0)
           </Text>
         </TouchableOpacity>
@@ -591,15 +522,10 @@ export default function CalendarScreen() {
           <View
             style={[
               styles.modalContent,
-              { backgroundColor: Colors[colorScheme ?? "light"].background },
+              { backgroundColor: Colors["light"].background },
             ]}
           >
-            <Text
-              style={[
-                styles.modalTitle,
-                { color: Colors[colorScheme ?? "light"].text },
-              ]}
-            >
+            <Text style={[styles.modalTitle, { color: Colors["light"].text }]}>
               Add New Event
             </Text>
 
@@ -607,22 +533,17 @@ export default function CalendarScreen() {
               style={[
                 styles.input,
                 {
-                  color: Colors[colorScheme ?? "light"].text,
+                  color: Colors["light"].text,
                   borderColor: "#ddd",
                 },
               ]}
               placeholder="Event Title"
-              placeholderTextColor={Colors[colorScheme ?? "light"].icon}
+              placeholderTextColor={Colors["light"].icon}
               value={eventTitle}
               onChangeText={setEventTitle}
             />
 
-            <Text
-              style={[
-                styles.timeLabel,
-                { color: Colors[colorScheme ?? "light"].text },
-              ]}
-            >
+            <Text style={[styles.timeLabel, { color: Colors["light"].text }]}>
               Start Time:
             </Text>
             <DateTimePicker
@@ -641,15 +562,10 @@ export default function CalendarScreen() {
                   }
                 }
               }}
-              textColor={Colors[colorScheme ?? "light"].text}
+              textColor={Colors["light"].text}
             />
 
-            <Text
-              style={[
-                styles.timeLabel,
-                { color: Colors[colorScheme ?? "light"].text },
-              ]}
-            >
+            <Text style={[styles.timeLabel, { color: Colors["light"].text }]}>
               End Time:
             </Text>
             <DateTimePicker
@@ -661,7 +577,7 @@ export default function CalendarScreen() {
                   setEndTime(selectedDate);
                 }
               }}
-              textColor={Colors[colorScheme ?? "light"].text}
+              textColor={Colors["light"].text}
               minimumDate={startTime}
             />
 
