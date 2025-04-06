@@ -554,17 +554,18 @@ export default function TodoScreen() {
         )}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
+        ListFooterComponent={() => (
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => setModalVisible(true)}
+          >
+            <View style={styles.addButtonCircle}>
+              <IconSymbol name="plus" size={16} color="#687076" />
+            </View>
+            <Text style={styles.addButtonText}>Add new task</Text>
+          </TouchableOpacity>
+        )}
       />
-
-      <TouchableOpacity
-        style={[
-          styles.addFloatingButton,
-          { backgroundColor: Colors[theme].tint },
-        ]}
-        onPress={() => setModalVisible(true)}
-      >
-        <IconSymbol name="plus" size={24} color="#FFFFFF" />
-      </TouchableOpacity>
 
       {/* Task Creation/Edit Modal */}
       <Modal
@@ -716,20 +717,35 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 120, // Increased padding at bottom for tab bar
   },
-  addFloatingButton: {
-    position: "absolute",
-    bottom: 90, // Moved higher to avoid tab bar
-    right: 30,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: "center",
-    alignItems: "center",
+  addButton: {
+    marginTop: 8,
+    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: 'white',
+    borderRadius: 12,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  addButtonCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#687076',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  addButtonText: {
+    fontSize: 16,
+    color: '#687076',
+    fontWeight: '400',
   },
   modalContainer: {
     flex: 1,
@@ -934,5 +950,20 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 16,
     fontWeight: "500",
+  },
+  addFloatingButton: {
+    position: 'absolute',
+    right: 20,
+    bottom: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
 });
