@@ -28,7 +28,6 @@ import * as Haptics from "expo-haptics";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import DayView, { CalendarEvent } from "@/components/calendar/DayView";
 import CalendarHeader from "@/components/calendar/CalendarHeader";
-import CurrentTimeIndicator from "@/components/calendar/CurrentTimeIndicator";
 
 // Move these constants to top level
 const burntCopper = "#A0430A"; // Primary accent color from constants
@@ -678,11 +677,6 @@ export default function CalendarScreen() {
               setInitialEventData(data);
               setModalVisible(true);
             }}
-          />
-          {/* Add current time indicator */}
-          <CurrentTimeIndicator
-            colorScheme={colorScheme}
-            isToday={selectedDate === new Date().toISOString().split("T")[0]}
           />
         </View>
       )}
