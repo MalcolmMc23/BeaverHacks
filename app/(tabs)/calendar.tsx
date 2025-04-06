@@ -11,6 +11,8 @@ import {
   PanResponder,
   GestureResponderEvent,
   PanResponderGestureState,
+  ViewStyle,
+  TextStyle,
 } from "react-native";
 import React from "react";
 import { Text, View, SafeAreaView } from "react-native";
@@ -98,6 +100,52 @@ const getRandomColor = () =>
   EVENT_COLORS[Math.floor(Math.random() * EVENT_COLORS.length)];
 
 type ViewMode = "day" | "month";
+
+interface Styles {
+  container: ViewStyle;
+  header: ViewStyle;
+  headerLeft: ViewStyle;
+  headerButton: ViewStyle;
+  headerButtonText: TextStyle;
+  headerTitle: TextStyle;
+  headerRight: ViewStyle;
+  headerIconButton: ViewStyle;
+  monthViewContainer: ViewStyle;
+  weekDays: ViewStyle;
+  weekDayText: TextStyle;
+  monthViewEvents: ViewStyle;
+  monthViewEventsList: ViewStyle;
+  monthViewEventItem: ViewStyle;
+  monthViewEventsTitle: TextStyle;
+  eventTitle: TextStyle;
+  eventTime: TextStyle;
+  noEvents: TextStyle;
+  dayHeader: ViewStyle;
+  dayHeaderText: TextStyle;
+  currentTimeDot: ViewStyle;
+  currentTimeLine: ViewStyle;
+  tabBar: ViewStyle;
+  tabBarButton: ViewStyle;
+  tabBarText: TextStyle;
+  timeSlot: ViewStyle;
+  timeSlotContent: ViewStyle;
+  timeText: TextStyle;
+  timeSlotDivider: ViewStyle;
+  timeSlotsContainer: ViewStyle;
+  timelineContainer: ViewStyle;
+  timelineContent: ViewStyle;
+  gridBackground: ViewStyle;
+  gridLine: ViewStyle;
+  timelineTouchArea: ViewStyle;
+  eventItem: ViewStyle;
+  currentTimeIndicator: ViewStyle;
+  hourRow: ViewStyle;
+  hourLabelContainer: ViewStyle;
+  hourLabel: TextStyle;
+  ampm: TextStyle;
+  hourSlot: ViewStyle;
+  halfHourLine: ViewStyle;
+}
 
 export default function CalendarScreen() {
   // Always use light mode
@@ -466,11 +514,56 @@ export default function CalendarScreen() {
     })
   ).current;
 
+  const handleTimeSlotPress = (hour: number, minutes: number = 0) => {
+    const startDate = new Date(selectedDate);
+    startDate.setHours(hour, minutes, 0);
+    
+    const endDate = new Date(startDate);
+    endDate.setHours(startDate.getHours() + 1); // Default 1-hour duration
+
+    const initialData = {
+      title: "No title",
+      location: "",
+      isAllDay: false,
+      startDate,
+      endDate,
+      description: "",
+      alert: "None",
+      showAs: "Busy"
+    };
+
+    setInitialEventData(initialData);
+    setModalVisible(true);
+  };
+
+  const renderTimeSlots = () => {
+    return HOURS.map((hour, index) => {
+      const isNoon = hour === "Noon";
+      const displayHour = isNoon ? "12" : hour;
+      const ampm = index < 12 ? "AM" : "PM";
+      const timeLabel = isNoon ? "Noon" : `${displayHour} ${ampm}`;
+      const actualHour = index === 0 ? 0 : index; // Convert to 24-hour format
+
+      return (
+        <TouchableOpacity
+          key={index}
+          style={styles.timeSlot}
+          onPress={() => handleTimeSlotPress(actualHour)}
+        >
+          <View style={styles.timeSlotContent}>
+            <Text style={styles.timeText}>{timeLabel}</Text>
+            <View style={styles.timeSlotDivider} />
+          </View>
+        </TouchableOpacity>
+      );
+    });
+  };
+
   return (
     <SafeAreaView
       style={[
         styles.container,
-        { backgroundColor: Colors["light"].background },
+        { backgroundColor: Colors[colorScheme].background },
       ]}
     >
       <StatusBar style="dark" />
@@ -481,10 +574,10 @@ export default function CalendarScreen() {
             <IconSymbol
               name="chevron.left"
               size={24}
-              color={Colors["light"].tint}
+              color={Colors[colorScheme].tint}
             />
             <Text
-              style={[styles.headerButtonText, { color: Colors["light"].tint }]}
+              style={[styles.headerButtonText, { color: Colors[colorScheme].tint }]}
             >
               {new Date().getMonth() === new Date(selectedDate).getMonth()
                 ? "Today"
@@ -492,7 +585,7 @@ export default function CalendarScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-        <Text style={[styles.headerTitle, { color: Colors["light"].tint }]}>
+        <Text style={[styles.headerTitle, { color: Colors[colorScheme].tint }]}>
           {currentMonth.split(" ")[0]} {/* Just show month name */}
         </Text>
         <View style={styles.headerRight}>
@@ -503,21 +596,21 @@ export default function CalendarScreen() {
             <IconSymbol
               name={viewMode === "day" ? "calendar" : "clock"}
               size={22}
-              color={Colors["light"].tint}
+              color={Colors[colorScheme].tint}
             />
           </TouchableOpacity>
           <TouchableOpacity style={styles.headerIconButton}>
             <IconSymbol
               name="magnifyingglass"
               size={22}
-              color={Colors["light"].tint}
+              color={Colors[colorScheme].tint}
             />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.headerIconButton}
             onPress={() => setModalVisible(true)}
           >
-            <IconSymbol name="plus" size={22} color={Colors["light"].tint} />
+            <IconSymbol name="plus" size={22} color={Colors[colorScheme].tint} />
           </TouchableOpacity>
         </View>
       </View>
@@ -526,40 +619,40 @@ export default function CalendarScreen() {
         // Month View
         <View style={styles.monthViewContainer}>
           <View style={styles.weekDays}>
-            <Text style={[styles.weekDayText, { color: Colors["light"].text }]}>
+            <Text style={[styles.weekDayText, { color: Colors[colorScheme].text }]}>
               S
             </Text>
-            <Text style={[styles.weekDayText, { color: Colors["light"].text }]}>
+            <Text style={[styles.weekDayText, { color: Colors[colorScheme].text }]}>
               M
             </Text>
-            <Text style={[styles.weekDayText, { color: Colors["light"].text }]}>
+            <Text style={[styles.weekDayText, { color: Colors[colorScheme].text }]}>
               T
             </Text>
-            <Text style={[styles.weekDayText, { color: Colors["light"].text }]}>
+            <Text style={[styles.weekDayText, { color: Colors[colorScheme].text }]}>
               W
             </Text>
-            <Text style={[styles.weekDayText, { color: Colors["light"].text }]}>
+            <Text style={[styles.weekDayText, { color: Colors[colorScheme].text }]}>
               T
             </Text>
-            <Text style={[styles.weekDayText, { color: Colors["light"].text }]}>
+            <Text style={[styles.weekDayText, { color: Colors[colorScheme].text }]}>
               F
             </Text>
-            <Text style={[styles.weekDayText, { color: Colors["light"].text }]}>
+            <Text style={[styles.weekDayText, { color: Colors[colorScheme].text }]}>
               S
             </Text>
           </View>
 
           <Calendar
             theme={{
-              calendarBackground: Colors["light"].background,
-              textSectionTitleColor: Colors["light"].text,
-              selectedDayBackgroundColor: Colors["light"].tint,
-              todayTextColor: Colors["light"].tint,
-              arrowColor: Colors["light"].tint,
+              calendarBackground: Colors[colorScheme].background,
+              textSectionTitleColor: Colors[colorScheme].text,
+              selectedDayBackgroundColor: Colors[colorScheme].tint,
+              todayTextColor: Colors[colorScheme].tint,
+              arrowColor: Colors[colorScheme].tint,
               selectedDayTextColor: "#ffffff",
-              dayTextColor: Colors["light"].text,
-              textDisabledColor: Colors["light"].icon,
-              monthTextColor: Colors["light"].text,
+              dayTextColor: Colors[colorScheme].text,
+              textDisabledColor: Colors[colorScheme].icon,
+              monthTextColor: Colors[colorScheme].text,
               "stylesheet.calendar.header": {
                 header: {
                   height: 0,
@@ -579,7 +672,7 @@ export default function CalendarScreen() {
             <Text
               style={[
                 styles.monthViewEventsTitle,
-                { color: Colors["light"].text },
+                { color: Colors[colorScheme].text },
               ]}
             >
               Events for {new Date(selectedDate).toLocaleDateString()}
@@ -607,7 +700,7 @@ export default function CalendarScreen() {
                 ))
               ) : (
                 <Text
-                  style={[styles.noEvents, { color: Colors["light"].icon }]}
+                  style={[styles.noEvents, { color: Colors[colorScheme].icon }]}
                 >
                   No events for this day
                 </Text>
@@ -618,15 +711,8 @@ export default function CalendarScreen() {
       ) : (
         // Day View
         <>
-          <View
-            style={[
-              styles.dayHeader,
-              { borderColor: isDark ? `${burntCopper}80` : `${burntCopper}40` },
-            ]}
-          >
-            <Text
-              style={[styles.dayHeaderText, { color: Colors["light"].text }]}
-            >
+          <View style={[styles.dayHeader, { borderColor: isDark ? `${burntCopper}80` : `${burntCopper}40` }]}>
+            <Text style={[styles.dayHeaderText, { color: Colors[colorScheme].text }]}>
               {selectedDayName} — {selectedDayFormatted}
             </Text>
           </View>
@@ -637,133 +723,51 @@ export default function CalendarScreen() {
             showsVerticalScrollIndicator={false}
             onScroll={handleScroll}
             scrollEventThrottle={16}
-            scrollEnabled={true} // Always allow scrolling
+            scrollEnabled={true}
           >
             <View style={styles.timelineContent}>
-              {/* Hour grid background - this will make all lines more visible */}
-              <View style={styles.gridBackground}>
-                {Array.from({ length: 24 }).map((_, index) => (
-                  <View
-                    key={`grid-${index}`}
-                    style={[
-                      styles.gridLine,
-                      {
-                        borderBottomColor: isDark
-                          ? `${burntCopper}30`
-                          : `${burntCopper}20`,
-                      },
-                    ]}
-                  />
-                ))}
-              </View>
-
-              {/* Touch area for long press to add event */}
-              <View
-                {...panResponder.panHandlers}
-                style={styles.timelineTouchArea}
-              />
-
-              {/* Event being created via drag */}
-              {dragEvent.visible && (
-                <View
-                  style={[
-                    styles.eventItem,
-                    {
-                      top: dragEvent.startY,
-                      height: 60, // Fixed 1-hour height (60 minutes)
-                      backgroundColor: dragEvent.color,
-                      opacity: 0.8,
-                      borderWidth: 2,
-                      borderColor: "white",
-                      zIndex: 100,
-                    },
-                  ]}
-                >
-                  <Text style={styles.eventTitle} numberOfLines={1}>
-                    New Event
-                  </Text>
-                  <Text style={styles.eventTime} numberOfLines={1}>
-                    {formatTime(getTimeFromPosition(dragEvent.startY))} -
-                    {formatTime(
-                      (() => {
-                        const eventEndTime = new Date(
-                          getTimeFromPosition(dragEvent.startY)
-                        );
-                        eventEndTime.setHours(eventEndTime.getHours() + 1);
-                        return eventEndTime;
-                      })()
-                    )}
-                  </Text>
-                </View>
-              )}
-
-              {/* Current time indicator - visible red line */}
-              {selectedDate === new Date().toISOString().split("T")[0] && (
-                <View
-                  style={[
-                    styles.currentTimeIndicator,
-                    {
-                      top: new Date().getHours() * 60 + new Date().getMinutes(),
-                    },
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.currentTimeDot,
-                      { backgroundColor: Colors["light"].tint },
-                    ]}
-                  />
-                  <View
-                    style={[
-                      styles.currentTimeLine,
-                      { backgroundColor: Colors["light"].tint },
-                    ]}
-                  />
-                </View>
-              )}
-
               {/* Time slots */}
-              {HOURS.map((hour, index) => (
-                <View key={index} style={styles.hourRow}>
-                  <View style={styles.hourLabelContainer}>
-                    <Text
-                      style={[
-                        styles.hourLabel,
-                        { color: Colors["light"].icon },
-                      ]}
-                    >
-                      {hour}
-                    </Text>
-                    <Text
-                      style={[styles.ampm, { color: Colors["light"].icon }]}
-                    >
-                      {hour !== "Noon" ? formatAMPM(index) : ""}
-                    </Text>
-                  </View>
-                  <View
-                    style={[
-                      styles.hourSlot,
-                      {
-                        borderBottomColor: isDark
-                          ? `${burntCopper}30`
-                          : `${burntCopper}20`,
-                      },
-                    ]}
+              {HOURS.map((hour, index) => {
+                const isNoon = hour === "Noon";
+                const displayHour = isNoon ? "12" : hour;
+                const ampm = index < 12 ? "AM" : "PM";
+                const timeLabel = isNoon ? "Noon" : `${displayHour} ${ampm}`;
+                const actualHour = index;
+
+                return (
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.hourRow}
+                    onPress={() => handleTimeSlotPress(actualHour)}
                   >
-                    {/* Half-hour line */}
-                    <View
-                      style={[
-                        styles.halfHourLine,
-                        {
-                          borderTopColor: isDark
-                            ? `${burntCopper}20`
-                            : `${burntCopper}15`,
-                        },
-                      ]}
-                    />
-                  </View>
+                    <View style={styles.hourLabelContainer}>
+                      <Text style={[styles.hourLabel, { color: Colors[colorScheme].icon }]}>
+                        {displayHour}
+                      </Text>
+                      <Text style={[styles.ampm, { color: Colors[colorScheme].icon }]}>
+                        {hour !== "Noon" ? ampm : ""}
+                      </Text>
+                    </View>
+                    <View style={[styles.hourSlot, {
+                      borderBottomColor: isDark ? `${burntCopper}30` : `${burntCopper}20`,
+                    }]}>
+                      <View style={[styles.halfHourLine, {
+                        borderTopColor: isDark ? `${burntCopper}20` : `${burntCopper}15`,
+                      }]} />
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+
+              {/* Current time indicator */}
+              {selectedDate === new Date().toISOString().split("T")[0] && (
+                <View style={[styles.currentTimeIndicator, {
+                  top: new Date().getHours() * 60 + new Date().getMinutes(),
+                }]}>
+                  <View style={[styles.currentTimeDot, { backgroundColor: Colors[colorScheme].tint }]} />
+                  <View style={[styles.currentTimeLine, { backgroundColor: Colors[colorScheme].tint }]} />
                 </View>
-              ))}
+              )}
 
               {/* Events */}
               {events[selectedDate]?.map((event, index) => {
@@ -771,14 +775,11 @@ export default function CalendarScreen() {
                 return (
                   <TouchableOpacity
                     key={index}
-                    style={[
-                      styles.eventItem,
-                      {
-                        top: top,
-                        height: height,
-                        backgroundColor: event.color,
-                      },
-                    ]}
+                    style={[styles.eventItem, {
+                      top: top,
+                      height: height,
+                      backgroundColor: event.color,
+                    }]}
                     onPress={() => handleEventPress(event, index)}
                   >
                     <Text style={styles.eventTitle} numberOfLines={1}>
@@ -797,17 +798,17 @@ export default function CalendarScreen() {
 
       <View style={styles.tabBar}>
         <TouchableOpacity style={styles.tabBarButton}>
-          <Text style={[styles.tabBarText, { color: Colors["light"].tint }]}>
+          <Text style={[styles.tabBarText, { color: Colors[colorScheme].tint }]}>
             Today
           </Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.tabBarButton}>
-          <Text style={[styles.tabBarText, { color: Colors["light"].text }]}>
+          <Text style={[styles.tabBarText, { color: Colors[colorScheme].text }]}>
             Calendars
           </Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.tabBarButton}>
-          <Text style={[styles.tabBarText, { color: Colors["light"].text }]}>
+          <Text style={[styles.tabBarText, { color: Colors[colorScheme].text }]}>
             Inbox (0)
           </Text>
         </TouchableOpacity>
@@ -873,7 +874,7 @@ export default function CalendarScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create<Styles>({
   container: {
     flex: 1,
   },
@@ -1181,5 +1182,30 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 2,
     elevation: 3,
+  },
+  timeSlot: {
+    height: 60,
+    width: '100%',
+  },
+  timeSlotContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+  },
+  timeText: {
+    width: 80,
+    fontSize: 14,
+    color: '#666',
+  },
+  timeSlotDivider: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E0E0E0',
+    marginLeft: 8,
+  },
+  timeSlotsContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
   },
 });
