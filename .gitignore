@@ -3,6 +3,10 @@
 # dependencies
 node_modules/
 
+# PNPM
+.pnpm-store/
+.pnpm-debug.log
+
 # Expo
 .expo/
 dist/
@@ -16,6 +20,18 @@ expo-env.d.ts
 *.p12
 *.key
 *.mobileprovision
+
+# iOS
+ios/build/
+ios/Pods/
+ios/Podfile.lock
+
+# Android
+android/app/build/
+android/build/
+android/gradle/
+android/local.properties
+android/.gradle/
 
 # Metro
 .metro-health-check*
@@ -34,5 +50,14 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# testing
+coverage/
+
+# Editors
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
 
 app-example
