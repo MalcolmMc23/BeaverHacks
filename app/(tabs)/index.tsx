@@ -23,6 +23,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function TodoScreen() {
   const colorScheme = useColorScheme();
+  const theme = (useColorScheme() ?? "light") as "light" | "dark";
   const [todos, setTodos] = useState<TodoItem[]>([]);
 
   // Load todos from AsyncStorage on component mount
@@ -234,12 +235,14 @@ export default function TodoScreen() {
     initialDate,
     onSave,
     pickerType,
+    theme,
   }: {
     visible: boolean;
     onClose: () => void;
     initialDate?: Date | null;
     onSave: (date: Date) => void;
     pickerType: "start" | "end";
+    theme: "light" | "dark";
   }) => {
     const [selectedDate, setSelectedDate] = useState(initialDate || new Date());
     const [selectedHours, setSelectedHours] = useState(selectedDate.getHours());
@@ -362,6 +365,7 @@ export default function TodoScreen() {
                   style={[
                     styles.dayButton,
                     isSelected(day) && styles.selectedDayButton,
+                    isSelected(day) && { backgroundColor: Colors[theme].tint },
                   ]}
                   onPress={() => selectDay(day)}
                 >
@@ -440,6 +444,10 @@ export default function TodoScreen() {
                     style={[
                       styles.amPmButton,
                       isAM && styles.selectedAmPmButton,
+                      isAM && {
+                        backgroundColor: Colors[theme].tint,
+                        borderColor: Colors[theme].tint,
+                      },
                     ]}
                     onPress={() => setHours(selectedHours % 12, true)}
                   >
@@ -453,6 +461,10 @@ export default function TodoScreen() {
                     style={[
                       styles.amPmButton,
                       !isAM && styles.selectedAmPmButton,
+                      !isAM && {
+                        backgroundColor: Colors[theme].tint,
+                        borderColor: Colors[theme].tint,
+                      },
                     ]}
                     onPress={() => setHours(selectedHours % 12, false)}
                   >
@@ -473,7 +485,7 @@ export default function TodoScreen() {
               <TouchableOpacity
                 style={[
                   styles.savePickerButton,
-                  { backgroundColor: Colors[colorScheme ?? "light"].tint },
+                  { backgroundColor: Colors[theme].tint },
                 ]}
                 onPress={handleSave}
               >
@@ -514,17 +526,12 @@ export default function TodoScreen() {
 
   return (
     <SafeAreaView
-      style={[
-        styles.container,
-        { backgroundColor: Colors[colorScheme ?? "light"].background },
-      ]}
+      style={[styles.container, { backgroundColor: Colors[theme].background }]}
     >
       <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
 
       <View style={styles.header}>
-        <Text
-          style={[styles.title, { color: Colors[colorScheme ?? "light"].text }]}
-        >
+        <Text style={[styles.title, { color: Colors[theme].text }]}>
           Todo List
         </Text>
         <Text style={styles.subtitle}>
@@ -542,7 +549,7 @@ export default function TodoScreen() {
             onToggle={handleToggleTodo}
             onDelete={handleDeleteTodo}
             onPress={handleEditTodo}
-            colorScheme={colorScheme ?? "light"}
+            colorScheme={theme}
           />
         )}
         showsVerticalScrollIndicator={false}
@@ -552,7 +559,7 @@ export default function TodoScreen() {
       <TouchableOpacity
         style={[
           styles.addFloatingButton,
-          { backgroundColor: Colors[colorScheme ?? "light"].tint },
+          { backgroundColor: Colors[theme].tint },
         ]}
         onPress={() => setModalVisible(true)}
       >
@@ -640,6 +647,7 @@ export default function TodoScreen() {
               initialDate={startDate || new Date()}
               onSave={handleStartDateSet}
               pickerType="start"
+              theme={theme}
             />
 
             <DatePickerPopup
@@ -653,6 +661,7 @@ export default function TodoScreen() {
               }
               onSave={handleEndDateSet}
               pickerType="end"
+              theme={theme}
             />
 
             <View style={styles.modalFooter}>
@@ -661,7 +670,7 @@ export default function TodoScreen() {
                   styles.saveButton,
                   {
                     backgroundColor: newTaskText.trim()
-                      ? Colors[colorScheme ?? "light"].tint
+                      ? Colors[theme].tint
                       : "#cccccc",
                   },
                 ]}
@@ -851,7 +860,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   selectedDayButton: {
-    backgroundColor: Colors.light.tint,
     borderRadius: 50,
   },
   dayText: {
@@ -904,12 +912,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E0E0E0",
   },
-  selectedAmPmButton: {
-    backgroundColor: Colors.light.tint,
-    borderColor: Colors.light.tint,
-  },
+  selectedAmPmButton: {},
   amPmText: {
     fontSize: 16,
+    fontWeight: "500",
   },
   selectedAmPmText: {
     color: "white",

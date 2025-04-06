@@ -19,32 +19,20 @@ import { Text, View, SafeAreaView } from "react-native";
 import { Colors } from "@/constants/Colors";
 import { StatusBar } from "expo-status-bar";
 import { Calendar, DateData } from "react-native-calendars";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { AddEventModal } from "@/components/AddEventModal";
 import { EditEventModal } from "@/components/EditEventModal";
 import * as Haptics from "expo-haptics";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import DayView, { CalendarEvent } from "@/components/calendar/DayView";
 
 // Move these constants to top level
 const burntCopper = "#A0430A"; // Primary accent color from constants
 const seaMist = "#DFE8E6"; // Secondary color from constants
 
-// Define types for our events
-interface CalendarEvent {
-  title: string;
-  start: Date;
-  end: Date;
-  location?: string;
-  description?: string;
-  color?: string;
-  isAllDay?: boolean;
-  alert?: string;
-  showAs?: string;
-}
-
+// Define types for our events using the imported CalendarEvent
 interface EventsState {
   [date: string]: CalendarEvent[];
 }
@@ -66,35 +54,6 @@ const EVENT_COLORS = [
   "#654321", // Darker brown
   "#6B4226", // Medium brown
   "#AF52DE",
-];
-
-// Array of all hours for day view
-const HOURS = [
-  "12",
-  "1",
-  "2",
-  "3",
-  "4",
-  "5",
-  "6",
-  "7",
-  "8",
-  "9",
-  "10",
-  "11",
-  "Noon",
-  "1",
-  "2",
-  "3",
-  "4",
-  "5",
-  "6",
-  "7",
-  "8",
-  "9",
-  "10",
-  "11",
-  "12", // Add 12 AM for the next day
 ];
 
 const getRandomColor = () =>
@@ -121,31 +80,19 @@ interface Styles {
   eventTitle: TextStyle;
   eventTime: TextStyle;
   noEvents: TextStyle;
-  dayHeader: ViewStyle;
-  dayHeaderText: TextStyle;
-  currentTimeDot: ViewStyle;
-  currentTimeLine: ViewStyle;
   tabBar: ViewStyle;
   tabBarButton: ViewStyle;
   tabBarText: TextStyle;
-  timeSlot: ViewStyle;
-  timeSlotContent: ViewStyle;
-  timeText: TextStyle;
-  timeSlotDivider: ViewStyle;
-  timeSlotsContainer: ViewStyle;
-  timelineContainer: ViewStyle;
-  timelineContent: ViewStyle;
-  gridBackground: ViewStyle;
-  gridLine: ViewStyle;
-  timelineTouchArea: ViewStyle;
-  eventItem: ViewStyle;
-  currentTimeIndicator: ViewStyle;
-  hourRow: ViewStyle;
-  hourLabelContainer: ViewStyle;
-  hourLabel: TextStyle;
-  ampm: TextStyle;
-  hourSlot: ViewStyle;
-  halfHourLine: ViewStyle;
+  modalContainer: ViewStyle;
+  modalContent: ViewStyle;
+  modalTitle: TextStyle;
+  input: TextStyle;
+  timeLabel: TextStyle;
+  modalButtons: ViewStyle;
+  button: ViewStyle;
+  cancelButton: ViewStyle;
+  submitButton: ViewStyle;
+  buttonText: TextStyle;
 }
 
 export default function CalendarScreen() {
@@ -187,72 +134,6 @@ export default function CalendarScreen() {
     null
   );
   const LONG_PRESS_DURATION = 1200; // 1.2 seconds to trigger event creation modal
-
-  // Load calendar events from AsyncStorage on component mount
-  useEffect(() => {
-    const loadCalendarEvents = async () => {
-      try {
-        const storedEvents = await AsyncStorage.getItem("calendarEvents");
-        if (storedEvents) {
-          const parsedEvents: EventsState = JSON.parse(storedEvents);
-
-          // Convert string dates back to Date objects
-          const processedEvents: EventsState = {};
-
-          // Process each date's events
-          Object.keys(parsedEvents).forEach((date) => {
-            processedEvents[date] = parsedEvents[date].map((event) => ({
-              ...event,
-              start: new Date(event.start),
-              end: new Date(event.end),
-            }));
-          });
-
-          setEvents(processedEvents);
-
-          // Also restore marked dates for events
-          const newMarkedDates: MarkedDatesState = {};
-          Object.keys(processedEvents).forEach((date) => {
-            if (processedEvents[date]?.length > 0) {
-              newMarkedDates[date] = {
-                marked: true,
-                dots: [{ color: "#FF3B30" }],
-              };
-            }
-          });
-
-          // Make sure current date is marked as selected
-          newMarkedDates[selectedDate] = {
-            ...newMarkedDates[selectedDate],
-            selected: true,
-            selectedColor: "#FF3B30",
-          };
-
-          setMarkedDates(newMarkedDates);
-        }
-      } catch (error) {
-        console.error("Error loading calendar events:", error);
-      }
-    };
-
-    loadCalendarEvents();
-  }, []);
-
-  // Save calendar events to AsyncStorage whenever they change
-  useEffect(() => {
-    const saveCalendarEvents = async () => {
-      try {
-        await AsyncStorage.setItem("calendarEvents", JSON.stringify(events));
-      } catch (error) {
-        console.error("Error saving calendar events:", error);
-      }
-    };
-
-    // Only save if there are events to save
-    if (Object.keys(events).length > 0) {
-      saveCalendarEvents();
-    }
-  }, [events]);
 
   const onDayPress = (day: DateData) => {
     setSelectedDate(day.dateString);
@@ -603,29 +484,6 @@ export default function CalendarScreen() {
     setModalVisible(true);
   };
 
-  const renderTimeSlots = () => {
-    return HOURS.map((hour, index) => {
-      const isNoon = hour === "Noon";
-      const displayHour = isNoon ? "12" : hour;
-      const ampm = index < 12 ? "AM" : "PM";
-      const timeLabel = isNoon ? "Noon" : `${displayHour} ${ampm}`;
-      const actualHour = index === 0 ? 0 : index; // Convert to 24-hour format
-
-      return (
-        <TouchableOpacity
-          key={index}
-          style={styles.timeSlot}
-          onPress={() => handleTimeSlotPress(actualHour)}
-        >
-          <View style={styles.timeSlotContent}>
-            <Text style={styles.timeText}>{timeLabel}</Text>
-            <View style={styles.timeSlotDivider} />
-          </View>
-        </TouchableOpacity>
-      );
-    });
-  };
-
   return (
     <SafeAreaView
       style={[
@@ -798,142 +656,18 @@ export default function CalendarScreen() {
         </View>
       ) : (
         // Day View
-        <>
-          <View
-            style={[
-              styles.dayHeader,
-              { borderColor: isDark ? `${burntCopper}80` : `${burntCopper}40` },
-            ]}
-          >
-            <Text
-              style={[
-                styles.dayHeaderText,
-                { color: Colors[colorScheme].text },
-              ]}
-            >
-              {selectedDayName} — {selectedDayFormatted}
-            </Text>
-          </View>
-
-          <ScrollView
-            ref={scrollViewRef}
-            style={styles.timelineContainer}
-            showsVerticalScrollIndicator={false}
-            onScroll={handleScroll}
-            scrollEventThrottle={16}
-            scrollEnabled={true}
-          >
-            <View style={styles.timelineContent}>
-              {/* Time slots */}
-              {HOURS.map((hour, index) => {
-                const isNoon = hour === "Noon";
-                const displayHour = isNoon ? "12" : hour;
-                const ampm = index < 12 ? "AM" : "PM";
-                const timeLabel = isNoon ? "Noon" : `${displayHour} ${ampm}`;
-                const actualHour = index;
-
-                return (
-                  <TouchableOpacity
-                    key={index}
-                    style={styles.hourRow}
-                    onPress={() => handleTimeSlotPress(actualHour)}
-                  >
-                    <View style={styles.hourLabelContainer}>
-                      <Text
-                        style={[
-                          styles.hourLabel,
-                          { color: Colors[colorScheme].icon },
-                        ]}
-                      >
-                        {displayHour}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.ampm,
-                          { color: Colors[colorScheme].icon },
-                        ]}
-                      >
-                        {hour !== "Noon" ? ampm : ""}
-                      </Text>
-                    </View>
-                    <View
-                      style={[
-                        styles.hourSlot,
-                        {
-                          borderBottomColor: isDark
-                            ? `${burntCopper}30`
-                            : `${burntCopper}20`,
-                        },
-                      ]}
-                    >
-                      <View
-                        style={[
-                          styles.halfHourLine,
-                          {
-                            borderTopColor: isDark
-                              ? `${burntCopper}20`
-                              : `${burntCopper}15`,
-                          },
-                        ]}
-                      />
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-
-              {/* Current time indicator */}
-              {selectedDate === new Date().toISOString().split("T")[0] && (
-                <View
-                  style={[
-                    styles.currentTimeIndicator,
-                    {
-                      top: new Date().getHours() * 60 + new Date().getMinutes(),
-                    },
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.currentTimeDot,
-                      { backgroundColor: Colors[colorScheme].tint },
-                    ]}
-                  />
-                  <View
-                    style={[
-                      styles.currentTimeLine,
-                      { backgroundColor: Colors[colorScheme].tint },
-                    ]}
-                  />
-                </View>
-              )}
-
-              {/* Events */}
-              {events[selectedDate]?.map((event, index) => {
-                const { top, height } = positionEvent(event);
-                return (
-                  <TouchableOpacity
-                    key={index}
-                    style={[
-                      styles.eventItem,
-                      {
-                        top: top,
-                        height: height,
-                        backgroundColor: event.color,
-                      },
-                    ]}
-                    onPress={() => handleEventPress(event, index)}
-                  >
-                    <Text style={styles.eventTitle} numberOfLines={1}>
-                      {event.title}
-                    </Text>
-                    <Text style={styles.eventTime} numberOfLines={1}>
-                      {formatTime(event.start)} - {formatTime(event.end)}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </ScrollView>
-        </>
+        <DayView
+          selectedDate={selectedDate}
+          events={events[selectedDate] || []}
+          colorScheme={colorScheme}
+          isDark={isDark}
+          onEventPress={handleEventPress}
+          onTimeSlotPress={handleTimeSlotPress}
+          onInitiateEventCreation={(data) => {
+            setInitialEventData(data);
+            setModalVisible(true);
+          }}
+        />
       )}
 
       <View style={styles.tabBar}>
@@ -1068,71 +802,6 @@ const styles = StyleSheet.create<Styles>({
     width: 40,
     textAlign: "center",
   },
-  dayHeader: {
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    paddingVertical: 8,
-    alignItems: "center",
-  },
-  dayHeaderText: {
-    fontSize: 16,
-    fontWeight: "500",
-  },
-  timelineContainer: {
-    flex: 1,
-  },
-  timelineContent: {
-    position: "relative",
-    paddingBottom: 20, // Add some padding at the bottom
-  },
-  gridBackground: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 1,
-  },
-  gridLine: {
-    height: 60,
-    borderBottomWidth: 0.5,
-    width: "100%",
-  },
-  hourRow: {
-    flexDirection: "row",
-    height: 60,
-    position: "relative",
-    zIndex: 10,
-  },
-  hourLabelContainer: {
-    width: 50,
-    alignItems: "center",
-    justifyContent: "flex-start",
-    paddingTop: 8,
-  },
-  hourLabel: {
-    fontSize: 15,
-    fontWeight: "400",
-  },
-  ampm: {
-    fontSize: 11,
-    marginTop: -2,
-  },
-  hourSlot: {
-    flex: 1,
-    borderBottomWidth: 0.5,
-    minHeight: 1,
-    position: "relative",
-  },
-  eventItem: {
-    position: "absolute",
-    left: 60,
-    right: 10,
-    borderRadius: 6,
-    padding: 8,
-    overflow: "hidden",
-    zIndex: 50,
-  },
   eventTitle: {
     color: "white",
     fontWeight: "500",
@@ -1243,91 +912,6 @@ const styles = StyleSheet.create<Styles>({
     color: "white",
     fontWeight: "600",
     fontSize: 16,
-  },
-  currentTimeIndicator: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    zIndex: 120,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  currentTimeDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginLeft: 46,
-    marginRight: -4,
-  },
-  currentTimeLine: {
-    flex: 1,
-    height: 1,
-    marginRight: 10,
-  },
-  halfHourLine: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: 30,
-    borderTopWidth: 0.5,
-  },
-  timelineTouchArea: {
-    position: "absolute",
-    left: 50, // Match the left edge of the events
-    right: 0,
-    top: 0,
-    bottom: 0,
-    zIndex: 40, // Below events but above time grid
-  },
-  previewEvent: {
-    opacity: 0.8,
-    borderWidth: 2,
-    borderColor: "white",
-    zIndex: 100,
-    justifyContent: "space-between",
-    padding: 8,
-  },
-  confirmEventButton: {
-    position: "absolute",
-    right: 8,
-    top: 8,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.3)",
-  },
-  cancelEventButton: {
-    position: "absolute",
-    left: 8,
-    top: 8,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.3)",
-  },
-  resizeHandle: {
-    position: "absolute",
-    left: 10,
-    right: 10,
-    height: 24,
-    zIndex: 101,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  resizeHandleBar: {
-    width: 40,
-    height: 5,
-    borderRadius: 2.5,
-    backgroundColor: "white",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.3,
-    shadowRadius: 2,
-    elevation: 3,
   },
   timeSlot: {
     height: 60,
