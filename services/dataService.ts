@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { TodoItem } from '@/components/Todo';
+import { TodoItem } from '@/components/todo';
 
 // Type for calendar events based on the AddEventModal/EditEventModal structure
 export type CalendarEvent = {

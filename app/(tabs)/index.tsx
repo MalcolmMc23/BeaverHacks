@@ -15,7 +15,7 @@ import {
   Pressable,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import { Todo, TodoItem } from "@/components/Todo";
+import { Todo, TodoItem } from "@/components/todo";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { Colors } from "@/constants/Colors";
@@ -690,8 +690,8 @@ export default function TodoScreen() {
       </Modal>
 
       <TouchableOpacity
-        style={[styles.chatFab, { backgroundColor: '#8B4513' }]}
-        onPress={() => router.push('/chat')}
+        style={[styles.chatFab, { backgroundColor: "#8B4513" }]}
+        onPress={() => router.push("/chat")}
       >
         <IconSymbol name="mic" size={24} color="#FFFFFF" />
       </TouchableOpacity>
@@ -729,11 +729,11 @@ const styles = StyleSheet.create({
   addButton: {
     marginTop: 8,
     marginBottom: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderRadius: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
@@ -746,15 +746,15 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: '#687076',
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderColor: "#687076",
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 12,
   },
   addButtonText: {
     fontSize: 16,
-    color: '#687076',
-    fontWeight: '400',
+    color: "#687076",
+    fontWeight: "400",
   },
   modalContainer: {
     flex: 1,
@@ -961,32 +961,32 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   addFloatingButton: {
-    position: 'absolute',
+    position: "absolute",
     right: 20,
     bottom: 20,
     width: 56,
     height: 56,
     borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     elevation: 4,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
   },
   chatFab: {
-    position: 'absolute',
+    position: "absolute",
     right: 20,
     bottom: 90, // Positioned above the tab bar
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#8B4513',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#8B4513",
+    justifyContent: "center",
+    alignItems: "center",
     elevation: 4,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,

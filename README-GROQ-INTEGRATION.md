@@ -73,7 +73,7 @@ The integration consists of three main components:
 ## Using the ScheduleTodo Component
 
 ```jsx
-import { ScheduleTodo } from "@/components/ScheduleTodo";
+import { ScheduleTodo } from "@/components/todo";
 
 // In your component
 const handleToggleTodo = (id: string) => {

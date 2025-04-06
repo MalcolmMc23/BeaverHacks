@@ -8,6 +8,7 @@ import {
   Modal,
   ScrollView,
   Clipboard,
+  ActivityIndicator,
 } from "react-native";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { Colors } from "@/constants/Colors";
@@ -18,6 +19,9 @@ import { IconSymbol } from "@/components/ui/IconSymbol";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import { getTodoAndCalendarData } from "@/services/dataService";
+import { batchScheduleTodos } from "@/services/todoSchedulingService";
+import { TodoItem } from "@/components/todo";
+import { optimizeSchedule } from "@/scripts/optimizeSchedule";
 
 type ColorSchemeType = "light" | "dark";
 
@@ -59,6 +63,8 @@ export default function SettingsScreen() {
   const [showLockedAppsModal, setShowLockedAppsModal] = useState(false);
   const [jsonData, setJsonData] = useState<TodoCalendarData | null>(null);
   const [showJsonModal, setShowJsonModal] = useState(false);
+  const [isScheduling, setIsScheduling] = useState(false);
+  const [isOptimizing, setIsOptimizing] = useState(false);
 
   const handleRedoOnboarding = () => {
     Alert.alert(
@@ -104,6 +110,114 @@ export default function SettingsScreen() {
       console.error("Error fetching JSON data:", error);
       Alert.alert("Error", "Failed to load todo and calendar data");
     }
+  };
+
+  const handleScheduleAllTodos = async () => {
+    Alert.alert(
+      "Schedule All Todos",
+      "This will use AI to find optimal times for all incomplete todos and schedule them in your calendar. Continue?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Continue",
+          onPress: async () => {
+            try {
+              setIsScheduling(true);
+
+              // Get todos from AsyncStorage
+              const todosJson = await AsyncStorage.getItem("todos");
+              if (!todosJson) {
+                Alert.alert("No Todos", "No todos found to schedule.");
+                setIsScheduling(false);
+                return;
+              }
+
+              const todos = JSON.parse(todosJson) as TodoItem[];
+              const incompleteTodos = todos.filter(
+                (todo: TodoItem) => !todo.completed
+              );
+
+              if (incompleteTodos.length === 0) {
+                Alert.alert(
+                  "No Todos",
+                  "No incomplete todos found to schedule."
+                );
+                setIsScheduling(false);
+                return;
+              }
+
+              // Schedule all todos
+              const results = await batchScheduleTodos(incompleteTodos);
+
+              // Show results
+              Alert.alert(
+                "Scheduling Complete",
+                `Successfully scheduled ${results.scheduled} out of ${results.total} todos.\n\nSee the console for details.`,
+                [{ text: "OK" }]
+              );
+            } catch (error) {
+              console.error("Error scheduling todos:", error);
+              Alert.alert(
+                "Error",
+                "Failed to schedule todos. Please try again."
+              );
+            } finally {
+              setIsScheduling(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleOptimizeCalendar = async () => {
+    Alert.alert(
+      "Calendar AI Optimization",
+      "This will analyze your calendar events and optimize the scheduling of all your todos. Continue?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Continue",
+          onPress: async () => {
+            try {
+              setIsOptimizing(true);
+
+              // Run the comprehensive optimization
+              const result = await optimizeSchedule();
+
+              if (result.success) {
+                Alert.alert(
+                  "Optimization Complete",
+                  "Your calendar has been analyzed and all incomplete todos have been scheduled at optimal times.",
+                  [{ text: "OK" }]
+                );
+              } else {
+                Alert.alert(
+                  "Optimization Error",
+                  "There was an error during optimization. Please check the console for details.",
+                  [{ text: "OK" }]
+                );
+              }
+            } catch (error) {
+              console.error("Error optimizing calendar:", error);
+              Alert.alert(
+                "Optimization Error",
+                "An unexpected error occurred during optimization.",
+                [{ text: "OK" }]
+              );
+            } finally {
+              setIsOptimizing(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -219,6 +333,92 @@ export default function SettingsScreen() {
               size={20}
               color={Colors[theme].icon}
             />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.settingItem,
+              { borderColor: colorScheme === "dark" ? "#333" : "#e0e0e0" },
+            ]}
+            onPress={handleOptimizeCalendar}
+            disabled={isOptimizing}
+          >
+            <View style={styles.settingInfo}>
+              <IconSymbol
+                name="calendar.badge.exclamationmark"
+                size={24}
+                color={Colors[theme].tint}
+              />
+              <View style={styles.settingTextContainer}>
+                <Text
+                  style={[styles.settingTitle, { color: Colors[theme].text }]}
+                >
+                  AI Calendar Optimization
+                </Text>
+                <Text
+                  style={[
+                    styles.settingDescription,
+                    { color: Colors[theme].icon },
+                  ]}
+                >
+                  {isOptimizing
+                    ? "Optimization in progress..."
+                    : "Analyze patterns and optimize your entire schedule"}
+                </Text>
+              </View>
+            </View>
+            {isOptimizing ? (
+              <ActivityIndicator size="small" color={Colors[theme].tint} />
+            ) : (
+              <IconSymbol
+                name="chevron.right"
+                size={20}
+                color={Colors[theme].icon}
+              />
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.settingItem,
+              { borderColor: colorScheme === "dark" ? "#333" : "#e0e0e0" },
+            ]}
+            onPress={handleScheduleAllTodos}
+            disabled={isScheduling}
+          >
+            <View style={styles.settingInfo}>
+              <IconSymbol
+                name="calendar.badge.clock"
+                size={24}
+                color={Colors[theme].tint}
+              />
+              <View style={styles.settingTextContainer}>
+                <Text
+                  style={[styles.settingTitle, { color: Colors[theme].text }]}
+                >
+                  AI Schedule All Todos
+                </Text>
+                <Text
+                  style={[
+                    styles.settingDescription,
+                    { color: Colors[theme].icon },
+                  ]}
+                >
+                  {isScheduling
+                    ? "Scheduling in progress..."
+                    : "Use AI to schedule all incomplete todos"}
+                </Text>
+              </View>
+            </View>
+            {isScheduling ? (
+              <ActivityIndicator size="small" color={Colors[theme].tint} />
+            ) : (
+              <IconSymbol
+                name="chevron.right"
+                size={20}
+                color={Colors[theme].icon}
+              />
+            )}
           </TouchableOpacity>
         </View>
       </View>

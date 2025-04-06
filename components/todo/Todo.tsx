@@ -1,14 +1,8 @@
-import React, { useState } from "react";
-import {
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  ActivityIndicator,
-} from "react-native";
-import { IconSymbol } from "./ui/IconSymbol";
+import React from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { IconSymbol } from "../ui/IconSymbol";
 import { Colors } from "@/constants/Colors";
-import { findOptimalTimeForTodo } from "@/services/aiService";
+import { TodoOptimalTimeAssistant } from "./TodoOptimalTimeAssistant";
 
 export type TodoItem = {
   id: string;
@@ -36,13 +30,6 @@ export function Todo({
   onSchedule,
   colorScheme = "light",
 }: TodoProps) {
-  const [isLoading, setIsLoading] = useState(false);
-  const [aiSuggestion, setAiSuggestion] = useState<{
-    startTime: string | null;
-    endTime: string | null;
-    reasoning: string | null;
-  } | null>(null);
-
   const burntCopper = Colors[colorScheme].tint;
 
   const formatDate = (date?: Date) => {
@@ -63,37 +50,6 @@ export function Todo({
 
   const startDateFormatted = formatDate(item.startDate);
   const endDateFormatted = formatDate(item.endDate);
-
-  const handleFindOptimalTime = async () => {
-    setIsLoading(true);
-    setAiSuggestion(null);
-
-    const result = await findOptimalTimeForTodo(item);
-
-    if (
-      result.success &&
-      result.suggestedStartTime &&
-      result.suggestedEndTime
-    ) {
-      setAiSuggestion({
-        startTime: result.suggestedStartTime,
-        endTime: result.suggestedEndTime,
-        reasoning: result.reasoning,
-      });
-    } else {
-      // Could show an error toast here
-      console.error(result.error || "No suitable time found");
-    }
-
-    setIsLoading(false);
-  };
-
-  const handleScheduleSuggestion = () => {
-    if (aiSuggestion?.startTime && aiSuggestion?.endTime && onSchedule) {
-      onSchedule(item.id, aiSuggestion.startTime, aiSuggestion.endTime);
-      setAiSuggestion(null);
-    }
-  };
 
   return (
     <TouchableOpacity
@@ -147,36 +103,12 @@ export function Todo({
           </Text>
         )}
 
-        {!item.completed && !isLoading && !aiSuggestion && (
-          <TouchableOpacity
-            style={styles.findTimeButton}
-            onPress={handleFindOptimalTime}
-          >
-            <IconSymbol name="calendar.badge.clock" size={14} color="#FFFFFF" />
-            <Text style={styles.findTimeText}>Find optimal time</Text>
-          </TouchableOpacity>
-        )}
-
-        {isLoading && (
-          <View style={styles.findTimeButton}>
-            <ActivityIndicator size="small" color="#FFFFFF" />
-            <Text style={styles.findTimeText}>Finding optimal time...</Text>
-          </View>
-        )}
-
-        {aiSuggestion && (
-          <View style={styles.suggestionContainer}>
-            <Text style={styles.suggestionText}>
-              Suggested:{" "}
-              {new Date(aiSuggestion.startTime || "").toLocaleString()}
-            </Text>
-            <TouchableOpacity
-              style={styles.scheduleButton}
-              onPress={handleScheduleSuggestion}
-            >
-              <Text style={styles.scheduleButtonText}>Schedule</Text>
-            </TouchableOpacity>
-          </View>
+        {onSchedule && (
+          <TodoOptimalTimeAssistant
+            item={item}
+            onSchedule={onSchedule}
+            colorScheme={colorScheme}
+          />
         )}
       </View>
 
@@ -242,46 +174,5 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     padding: 4,
-  },
-  findTimeButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#5048E5",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
-    marginTop: 8,
-    alignSelf: "flex-start",
-  },
-  findTimeText: {
-    color: "white",
-    fontSize: 12,
-    marginLeft: 6,
-    fontWeight: "500",
-  },
-  suggestionContainer: {
-    marginTop: 8,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#F1F0FF",
-    padding: 8,
-    borderRadius: 6,
-  },
-  suggestionText: {
-    color: "#5048E5",
-    fontSize: 12,
-    flex: 1,
-  },
-  scheduleButton: {
-    backgroundColor: "#5048E5",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 4,
-  },
-  scheduleButtonText: {
-    color: "white",
-    fontSize: 12,
-    fontWeight: "500",
   },
 });

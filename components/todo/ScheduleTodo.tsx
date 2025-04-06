@@ -8,8 +8,8 @@ import {
   Alert,
 } from "react-native";
 import { Todo, TodoItem } from "./Todo";
-import { AddEventModal } from "./AddEventModal";
-import { AddButton } from "./ui/AddButton";
+import { AddEventModal } from "../AddEventModal";
+import { AddButton } from "../ui/AddButton";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type ScheduleTodoProps = {
@@ -49,6 +49,13 @@ export function ScheduleTodo({
     // Find the todo item
     const todo = todos.find((t) => t.id === id);
     if (!todo) return;
+
+    console.log(`[ScheduleTodo] 📅 Scheduling todo: "${todo.text}"`);
+    console.log(
+      `[ScheduleTodo] ⏰ Time slot: ${new Date(
+        startTime
+      ).toLocaleString()} to ${new Date(endTime).toLocaleString()}`
+    );
 
     // Set the selected todo and show the add event modal
     setSelectedTodoId(id);
@@ -101,6 +108,15 @@ export function ScheduleTodo({
         };
 
         onUpdateTodo(updatedTodo);
+
+        console.log(
+          `[ScheduleTodo] ✅ Todo scheduled as event: "${todo.text}"`
+        );
+        console.log(
+          `[ScheduleTodo] 📆 Event time: ${new Date(
+            event.startDate
+          ).toLocaleString()} to ${new Date(event.endDate).toLocaleString()}`
+        );
       }
     }
 
