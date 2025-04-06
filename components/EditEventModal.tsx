@@ -9,6 +9,7 @@ import {
   Platform,
   ScrollView,
   Modal,
+  Alert,
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 
@@ -97,6 +98,15 @@ export function EditEventModal({
 
   const handleSave = () => {
     if (!title.trim()) return;
+
+    // Validate that end time is not before start time
+    if (endDate < startDate) {
+      // Set end date to be 1 hour after start date
+      const newEndDate = new Date(startDate.getTime() + 60 * 60 * 1000);
+      setEndDate(newEndDate);
+      Alert.alert("Invalid Time", "End time cannot be before start time. End time has been adjusted.");
+      return;
+    }
 
     onSave({
       title,
@@ -229,7 +239,17 @@ export function EditEventModal({
                 value={startDate}
                 mode={isAllDay ? "date" : "datetime"}
                 is24Hour={false}
-                onChange={(event, date) => date && setStartDate(date)}
+                onChange={(event, date) => {
+                  if (date) {
+                    setStartDate(date);
+                    // If start date is after end date, update end date to be after start date
+                    if (date > endDate) {
+                      // Set end date to be 1 hour after start date
+                      const newEndDate = new Date(date.getTime() + 60 * 60 * 1000);
+                      setEndDate(newEndDate);
+                    }
+                  }
+                }}
                 textColor={Colors.light.text}
               />
             </View>
@@ -242,10 +262,30 @@ export function EditEventModal({
                 value={endDate}
                 mode={isAllDay ? "date" : "datetime"}
                 is24Hour={false}
-                onChange={(event, date) => date && setEndDate(date)}
+                onChange={(event, date) => {
+                  if (date) {
+                    // Only set the end date if it's after the start date
+                    if (date >= startDate) {
+                      setEndDate(date);
+                    } else {
+                      // If user tries to set end date before start date, 
+                      // keep the current end date or set it to 1 hour after start
+                      const newEndDate = new Date(startDate.getTime() + 60 * 60 * 1000);
+                      setEndDate(newEndDate);
+                      Alert.alert("Invalid Time", "End time cannot be before start time. End time has been adjusted.");
+                    }
+                  }
+                }}
                 textColor={Colors.light.text}
               />
             </View>
+          </View>
+          
+          <View style={styles.timeConstraintRow}>
+            <IconSymbol name="info.circle" size={16} color={Colors.light.tint} />
+            <ThemedText style={styles.timeConstraintText}>
+              End time must be after start time
+            </ThemedText>
           </View>
         </View>
 
@@ -660,5 +700,15 @@ const styles = StyleSheet.create({
   importanceText: {
     fontSize: 17,
     color: Colors.light.text,
+  },
+  timeConstraintRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+  },
+  timeConstraintText: {
+    fontSize: 17,
+    color: Colors.light.text,
+    marginLeft: 8,
   },
 });

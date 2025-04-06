@@ -9,6 +9,7 @@ import {
   Platform,
   ScrollView,
   Modal,
+  Alert,
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 
@@ -89,6 +90,15 @@ export function AddEventModal({
 
   const handleAdd = () => {
     if (!title.trim()) return;
+
+    // Validate that end time is not before start time
+    if (endDate < startDate) {
+      // Set end date to be 1 hour after start date
+      const newEndDate = new Date(startDate.getTime() + 60 * 60 * 1000);
+      setEndDate(newEndDate);
+      Alert.alert("Invalid Time", "End time cannot be before start time. End time has been adjusted.");
+      return;
+    }
 
     onAdd({
       title,
@@ -220,7 +230,15 @@ export function AddEventModal({
                 value={startDate}
                 mode={isAllDay ? "date" : "datetime"}
                 is24Hour={false}
-                onChange={(event, date) => date && setStartDate(date)}
+                onChange={(event, date) => {
+                  if (date) {
+                    setStartDate(date);
+                    if (date > endDate) {
+                      const newEndDate = new Date(date.getTime() + 60 * 60 * 1000);
+                      setEndDate(newEndDate);
+                    }
+                  }
+                }}
                 textColor={Colors.light.text}
               />
             </View>
@@ -233,10 +251,27 @@ export function AddEventModal({
                 value={endDate}
                 mode={isAllDay ? "date" : "datetime"}
                 is24Hour={false}
-                onChange={(event, date) => date && setEndDate(date)}
+                onChange={(event, date) => {
+                  if (date) {
+                    if (date >= startDate) {
+                      setEndDate(date);
+                    } else {
+                      const newEndDate = new Date(startDate.getTime() + 60 * 60 * 1000);
+                      setEndDate(newEndDate);
+                      Alert.alert("Invalid Time", "End time cannot be before start time. End time has been adjusted.");
+                    }
+                  }
+                }}
                 textColor={Colors.light.text}
               />
             </View>
+          </View>
+          
+          <View style={styles.timeConstraintRow}>
+            <IconSymbol name="info.circle" size={16} color={Colors.light.tint} />
+            <ThemedText style={styles.timeConstraintText}>
+              End time must be after start time
+            </ThemedText>
           </View>
         </View>
 
@@ -602,5 +637,14 @@ const styles = StyleSheet.create({
     color: "#FFF",
     fontSize: 16,
     fontWeight: "600",
+  },
+  timeConstraintRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+  },
+  timeConstraintText: {
+    marginLeft: 8,
+    color: Colors.light.text,
   },
 });
