@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { Todo, TodoItem } from "./Todo";
 import { AddEventModal } from "./AddEventModal";
+import { AddButton } from "./ui/AddButton";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type ScheduleTodoProps = {
@@ -131,6 +132,8 @@ export function ScheduleTodo({
           colorScheme={colorScheme}
         />
       ))}
+
+      <AddButton onPress={() => setShowAddEventModal(true)} />
 
       {/* Add Event Modal */}
       {showAddEventModal && selectedTodoId && (
