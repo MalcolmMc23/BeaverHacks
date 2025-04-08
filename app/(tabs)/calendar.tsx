@@ -117,6 +117,17 @@ export default function CalendarScreen() {
     setCurrentView("day"); // Switch to Day view
   };
 
+  // --- NEW: Handler for selecting a date from the header week view ---
+  const handleHeaderDateSelect = (date: Date) => {
+    console.log("Date selected from header:", date.toDateString());
+    setSelectedDate(date); // Update the main selected date
+    // Optionally, switch to day view if not already there
+    if (currentView !== "day") {
+      setCurrentView("day");
+    }
+  };
+  // --- End NEW Handler ---
+
   // --- NEW: Handler to update event time after dragging ---
   const handleUpdateEventTime = useCallback(
     (eventId: string, newStartTime: Date, newEndTime: Date) => {
@@ -189,6 +200,8 @@ export default function CalendarScreen() {
         <CalendarHeader
           currentView={currentView}
           onViewChange={setCurrentView} // Pass setter function
+          selectedDate={selectedDate} // Pass the selected date
+          onDateSelect={handleHeaderDateSelect} // Pass the new handler
         />
 
         {/* Container for the main Calendar View (Day or Month) */}
