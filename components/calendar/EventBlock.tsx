@@ -35,16 +35,29 @@ interface EventBlockStyles {
   eventTimeText: TextStyle;
 }
 
-// Helper to calculate time from Y offset
+// Helper to calculate time from Y offset, snapping to 15-minute intervals
 const calculateTimeFromY = (y: number, originalDate: Date): Date => {
-  const totalMinutes = (y / HOUR_HEIGHT) * MINUTES_IN_HOUR;
-  const hours = Math.floor(totalMinutes / MINUTES_IN_HOUR);
-  // Round minutes to the nearest minute to avoid floating point issues
-  const minutes = Math.round(totalMinutes % MINUTES_IN_HOUR);
+  const totalMinutesFromTop = (y / HOUR_HEIGHT) * MINUTES_IN_HOUR;
+  let hours = Math.floor(totalMinutesFromTop / MINUTES_IN_HOUR);
+  let minutes = totalMinutesFromTop % MINUTES_IN_HOUR;
+
+  // Snap minutes to the nearest 15-minute interval
+  const snappedMinutes = Math.round(minutes / 15) * 15;
+
+  // Handle case where rounding pushes minutes to 60
+  if (snappedMinutes === 60) {
+    hours += 1;
+    minutes = 0;
+  } else {
+    minutes = snappedMinutes;
+  }
+
+  // Ensure hours stay within 0-23 range (although clamping later helps too)
+  hours = Math.max(0, Math.min(23, hours));
 
   // Create a new date object based on the original event date but with new time
   const newDate = new Date(originalDate);
-  // Set hours and minutes, reset seconds and milliseconds
+  // Set hours and snapped minutes, reset seconds and milliseconds
   newDate.setHours(hours, minutes, 0, 0);
   return newDate;
 };
