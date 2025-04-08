@@ -10,6 +10,7 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
+import "react-native-get-random-values";
 
 import { Colors } from "@/constants/Colors";
 import { Onboarding } from "@/components/Onboarding";

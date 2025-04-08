@@ -1,6 +1,6 @@
-import React from 'react';
-import { TouchableOpacity, StyleSheet } from 'react-native';
-import { IconSymbol } from './IconSymbol';
+import React from "react";
+import { TouchableOpacity, StyleSheet } from "react-native";
+import { IconSymbol } from "./IconSymbol";
 
 type AddButtonProps = {
   onPress: () => void;
@@ -19,10 +19,10 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#F3F4F6',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#F3F4F6",
+    justifyContent: "center",
+    alignItems: "center",
     marginVertical: 16,
-    alignSelf: 'center',
+    alignSelf: "center",
   },
-}); 
+});
