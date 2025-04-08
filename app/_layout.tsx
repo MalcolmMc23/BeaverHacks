@@ -27,15 +27,15 @@ function ErrorBoundary({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (Platform.OS === "web") {
-      const handleError = (error: any) => {
+      const handleError = (error: ErrorEvent) => {
         console.error("Caught error:", error);
         setHasError(true);
         setError(error.error || error);
       };
 
       // Only use window listeners on web
-      globalThis.addEventListener?.("error", handleError);
-      return () => globalThis.removeEventListener?.("error", handleError);
+      window.addEventListener("error", handleError);
+      return () => window.removeEventListener("error", handleError);
     }
 
     // For native, we could use AppState or other error handling approaches
@@ -82,10 +82,18 @@ export default function RootLayout() {
           FORCE_REFRESH_KEY,
         ]);
 
+      // Add debug logs
+      console.log("Onboarding status check:", {
+        hasCompletedOnboarding: hasCompletedOnboarding[1],
+        forceRefresh: forceRefresh[1],
+      });
+
       // Update refresh key to force re-render when needed
       setRefreshKey(forceRefresh[1] || "");
 
       const shouldShowOnboarding = hasCompletedOnboarding[1] !== "true";
+      console.log("Should show onboarding:", shouldShowOnboarding);
+
       setShowOnboarding(shouldShowOnboarding);
       return shouldShowOnboarding;
     } catch (error) {
@@ -99,10 +107,12 @@ export default function RootLayout() {
     const initialize = async () => {
       try {
         if (loaded) {
+          console.log("Fonts loaded, checking onboarding status...");
           await checkOnboardingStatus();
           // Always hide splash screen after a timeout to prevent getting stuck
           setTimeout(async () => {
             try {
+              console.log("Hiding splash screen...");
               await SplashScreen.hideAsync();
             } catch (e) {
               console.warn("Error hiding splash screen:", e);
@@ -131,14 +141,41 @@ export default function RootLayout() {
     }
   };
 
+  // FOR TESTING: Reset onboarding state on app load
+  useEffect(() => {
+    const resetOnboardingForTesting = async () => {
+      try {
+        console.log("Resetting onboarding status for testing...");
+        await AsyncStorage.removeItem("hasCompletedOnboarding");
+        // Force a refresh by updating the timestamp
+        await AsyncStorage.setItem(FORCE_REFRESH_KEY, Date.now().toString());
+        checkOnboardingStatus();
+      } catch (error) {
+        console.error("Error resetting onboarding:", error);
+      }
+    };
+
+    // Uncomment the line below to reset onboarding each time the app loads
+    // resetOnboardingForTesting();
+  }, []);
+
   // Safety fallback - render minimal UI instead of null
   if (!loaded || showOnboarding === null) {
+    console.log(
+      "App not ready yet - loaded:",
+      loaded,
+      "showOnboarding:",
+      showOnboarding
+    );
     return <View style={{ flex: 1 }} />;
   }
 
   if (showOnboarding) {
+    console.log("Rendering onboarding screen");
     return <Onboarding onComplete={handleOnboardingComplete} />;
   }
+
+  console.log("Rendering main app");
 
   return (
     <ErrorBoundary>

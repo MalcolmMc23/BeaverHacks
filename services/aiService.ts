@@ -2,6 +2,7 @@ import { Groq } from 'groq-sdk';
 import { getTodoAndCalendarData } from './dataService';
 import { TodoItem } from '@/components/todo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createCalendarEvent } from './calendarService';
 
 // IMPORTANT: In production, use environment variables or a secure storage system
 // DO NOT hardcode your API key like this
@@ -240,4 +241,115 @@ export async function findOptimalTimeForTodo(todo: TodoItem): Promise<OptimalTim
  *   }
  *   setIsLoading(false);
  * };
- */ 
+ */
+
+/**
+ * Creates a calendar event at a random time slot during the current day
+ * 
+ * @param eventTitle The title for the event
+ * @param durationMinutes Duration of the event in minutes (default: 30)
+ * @param options Additional event options like location, description, etc.
+ * @returns Promise with the result of the event creation
+ */
+export async function createRandomEventToday(
+  eventTitle: string, 
+  durationMinutes: number = 30,
+  options?: {
+    location?: string;
+    description?: string;
+    color?: string;
+    isAllDay?: boolean;
+    alert?: string;
+    showAs?: string;
+  }
+): Promise<any> {
+  // Get current date
+  const today = new Date();
+  
+  // Set minimum time to current time (don't schedule in the past)
+  const minHour = today.getHours();
+  const minMinute = today.getMinutes();
+  
+  // Set maximum time to 10pm (22:00) to avoid scheduling too late
+  const maxHour = 22;
+  
+  // Generate random hour between min and max
+  let startHour = Math.floor(Math.random() * (maxHour - minHour)) + minHour;
+  
+  // Generate random minute (0, 15, 30, or 45 for nice time slots)
+  let startMinute = Math.floor(Math.random() * 4) * 15;
+  
+  // If we're using the current hour, make sure the minute is after current minute
+  if (startHour === minHour && startMinute < minMinute) {
+    // Round up to the next 15-minute slot
+    startMinute = Math.ceil(minMinute / 15) * 15;
+    
+    // If we're past 45 minutes, move to the next hour
+    if (startMinute >= 60) {
+      startHour += 1;
+      startMinute = 0;
+      
+      // Check if we've gone past our max hour
+      if (startHour > maxHour) {
+        // If no time available today, fail gracefully
+        console.warn("No available time slots left today");
+        return {
+          success: false,
+          error: "No available time slots remaining today"
+        };
+      }
+    }
+  }
+  
+  // Create start date
+  const startDate = new Date(today);
+  startDate.setHours(startHour, startMinute, 0, 0);
+  
+  // Create end date based on duration
+  const endDate = new Date(startDate);
+  endDate.setMinutes(endDate.getMinutes() + durationMinutes);
+  
+  // If end time is past midnight, adjust to end at midnight
+  if (endDate.getDate() !== today.getDate()) {
+    endDate.setHours(23, 59, 0, 0);
+  }
+  
+  try {
+    // Create the event data
+    const eventData = {
+      title: eventTitle,
+      start: startDate,
+      end: endDate,
+      location: options?.location || '',
+      description: options?.description || 'Automatically scheduled event',
+      color: options?.color,
+      isAllDay: options?.isAllDay || false,
+      alert: options?.alert || '15 minutes before',
+      showAs: options?.showAs || 'Busy',
+    };
+    
+    // Call the calendar service to create the event
+    const newEvent = createCalendarEvent(eventData);
+    
+    if (newEvent) {
+      return {
+        success: true,
+        event: newEvent,
+        message: `Event "${eventTitle}" created from ${startDate.toLocaleTimeString()} to ${endDate.toLocaleTimeString()}`
+      };
+    } else {
+      // The calendar service wasn't ready yet
+      return {
+        success: false,
+        error: "Calendar not initialized yet. Please try navigating to the Calendar tab first and then back to Settings.",
+        eventData: eventData
+      };
+    }
+  } catch (error: any) {
+    console.error('Error creating random event:', error);
+    return {
+      success: false,
+      error: error.message || 'Unknown error occurred during event creation'
+    };
+  }
+} 
