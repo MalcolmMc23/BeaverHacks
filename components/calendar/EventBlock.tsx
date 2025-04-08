@@ -62,26 +62,28 @@ export const EventBlock: React.FC<EventBlockProps> = ({
 
   // Shared values for position
   const offsetY = useSharedValue(0);
-  const startY = useSharedValue(0); // Keep track of start position
-  const isDragging = useSharedValue(false); // Track drag state
+  const startY = useSharedValue(0); // Keep track of drag start offset
 
-  // --- Reaction to reset offset when position changes externally ---
+  // Use animated reaction to reset offset *after* the top prop changes
   useAnimatedReaction(
-    () => style?.top, // Watch the top prop from style
-    (newTop, previousTop) => {
-      if (!isDragging.value && newTop !== previousTop) {
-        // If we are not dragging and the top position prop changed,
-        // it means the parent updated the position. Reset our local offset.
+    () => style?.top, // Input: watch the top prop from style
+    (currentTop, previousTop) => {
+      if (
+        currentTop !== undefined &&
+        currentTop !== previousTop &&
+        offsetY.value !== 0 // Only reset if there *was* an offset
+      ) {
+        // When the parent re-renders and provides a new `top` style,
+        // and we actually dragged (offsetY is not 0), reset the visual offset.
         offsetY.value = 0;
       }
     },
-    [style?.top, isDragging] // Dependencies for the reaction
+    [style?.top, offsetY] // Dependencies for the reaction setup
   );
 
   // --- Gesture Handler ---
   const panGesture = Gesture.Pan()
     .onBegin(() => {
-      isDragging.value = true; // Set dragging flag
       startY.value = offsetY.value; // Store current offset when drag begins
     })
     .onUpdate((e) => {
@@ -89,62 +91,57 @@ export const EventBlock: React.FC<EventBlockProps> = ({
       offsetY.value = startY.value + e.translationY;
     })
     .onEnd(() => {
-      try {
-        // Use try...finally for robust state reset
-        // Calculate new position based on final offset
-        // Ensure the top position doesn't go below 0
-        const finalY = Math.max(0, originalTop + offsetY.value);
+      // Calculate the final visual Y position based on the original prop and the drag offset
+      const finalVisualY = Math.max(0, originalTop + offsetY.value);
 
-        // Calculate new start time based on the final Y position
-        const newStartTime = calculateTimeFromY(finalY, event.startTime);
+      // Calculate the logical new start/end times based on this final visual position
+      const newStartTime = calculateTimeFromY(finalVisualY, event.startTime);
 
-        // Calculate duration in milliseconds
-        const durationMs = event.endTime.getTime() - event.startTime.getTime();
+      // Calculate duration in milliseconds
+      const durationMs = event.endTime.getTime() - event.startTime.getTime();
 
-        // Calculate new end time by adding the original duration
-        const newEndTime = new Date(newStartTime.getTime() + durationMs);
+      // Calculate new end time by adding the original duration
+      const newEndTime = new Date(newStartTime.getTime() + durationMs);
 
-        // Clamp new start time to prevent going before 00:00
-        const minTime = new Date(newStartTime);
-        minTime.setHours(0, 0, 0, 0);
+      // Clamp new start time to prevent going before 00:00
+      const minTime = new Date(newStartTime);
+      minTime.setHours(0, 0, 0, 0);
 
-        let clampedStartTime = newStartTime;
-        let clampedEndTime = newEndTime;
+      let clampedStartTime = newStartTime;
+      let clampedEndTime = newEndTime;
 
+      if (clampedStartTime.getTime() < minTime.getTime()) {
+        clampedStartTime = minTime;
+        clampedEndTime = new Date(clampedStartTime.getTime() + durationMs);
+      }
+
+      // Prevent end time from exceeding the day boundary (24:00)
+      const dayEndTimeLimit = new Date(newStartTime);
+      dayEndTimeLimit.setHours(24, 0, 0, 0); // Start of next day
+
+      if (clampedEndTime.getTime() >= dayEndTimeLimit.getTime()) {
+        // Adjust end time to be exactly the end of the day (23:59:59.999)
+        clampedEndTime = new Date(dayEndTimeLimit.getTime() - 1);
+        // Adjust start time accordingly to maintain duration
+        clampedStartTime = new Date(clampedEndTime.getTime() - durationMs);
+        // Re-clamp start time if duration pushes it before 00:00
         if (clampedStartTime.getTime() < minTime.getTime()) {
           clampedStartTime = minTime;
+          // Recalculate end time if start time was clamped
           clampedEndTime = new Date(clampedStartTime.getTime() + durationMs);
-        }
-
-        // Prevent end time from exceeding the day boundary (24:00)
-        const dayEndTimeLimit = new Date(newStartTime);
-        dayEndTimeLimit.setHours(24, 0, 0, 0); // Start of next day
-
-        if (clampedEndTime.getTime() >= dayEndTimeLimit.getTime()) {
-          // Adjust end time to be exactly the end of the day (23:59:59.999)
-          clampedEndTime = new Date(dayEndTimeLimit.getTime() - 1);
-          // Adjust start time accordingly to maintain duration
-          clampedStartTime = new Date(clampedEndTime.getTime() - durationMs);
-          // Re-clamp start time if duration pushes it before 00:00
-          if (clampedStartTime.getTime() < minTime.getTime()) {
-            clampedStartTime = minTime;
-            // Recalculate end time if start time was clamped
-            clampedEndTime = new Date(clampedStartTime.getTime() + durationMs);
-            // Ensure end time doesn't exceed 24:00 again
-            if (clampedEndTime.getTime() >= dayEndTimeLimit.getTime()) {
-              clampedEndTime = new Date(dayEndTimeLimit.getTime() - 1);
-            }
+          // Ensure end time doesn't exceed 24:00 again
+          if (clampedEndTime.getTime() >= dayEndTimeLimit.getTime()) {
+            clampedEndTime = new Date(dayEndTimeLimit.getTime() - 1);
           }
         }
-
-        // Call the callback on the JS thread
-        runOnJS(onDragEnd)(event.id, clampedStartTime, clampedEndTime);
-
-        // !! REMOVED immediate reset !!
-        // offsetY.value = 0;
-      } finally {
-        isDragging.value = false; // Reset dragging flag *after* calculations/callback
       }
+
+      // Call the callback on the JS thread to trigger state update
+      runOnJS(onDragEnd)(event.id, clampedStartTime, clampedEndTime);
+
+      // !! DO NOT reset offsetY here !!
+      // The useAnimatedReaction handles resetting the offset visually
+      // *after* the parent component supplies the new `top` style.
     })
     .runOnJS(true); // Ensure onEnd runs on JS thread for state updates
 
