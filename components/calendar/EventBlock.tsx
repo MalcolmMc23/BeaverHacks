@@ -62,6 +62,15 @@ const calculateTimeFromY = (y: number, originalDate: Date): Date => {
   return newDate;
 };
 
+// Helper to calculate Y offset from time
+const calculateYFromTime = (time: Date): number => {
+  const hours = time.getHours();
+  const minutes = time.getMinutes();
+  const totalMinutes = hours * MINUTES_IN_HOUR + minutes;
+  const y = (totalMinutes / MINUTES_IN_HOUR) * HOUR_HEIGHT;
+  return y;
+};
+
 export const EventBlock: React.FC<EventBlockProps> = ({
   event,
   onPress,
@@ -100,8 +109,30 @@ export const EventBlock: React.FC<EventBlockProps> = ({
       startY.value = offsetY.value; // Store current offset when drag begins
     })
     .onUpdate((e) => {
-      // Allow dragging only vertically
-      offsetY.value = startY.value + e.translationY;
+      // Calculate the tentative visual Y position based on where the finger is
+      const tentativeVisualY = Math.max(
+        0,
+        originalTop + startY.value + e.translationY
+      );
+
+      // Calculate the time corresponding to this tentative position, snapping it
+      const tentativeTime = calculateTimeFromY(
+        tentativeVisualY,
+        event.startTime
+      ); // This snaps
+
+      // Convert the snapped time back to a Y position
+      const snappedVisualY = calculateYFromTime(tentativeTime);
+
+      // Calculate the required offset to reach the snapped position
+      // Prevent exceeding 24 hours visually during drag (onEnd handles final clamping)
+      const maxPossibleTop = 24 * HOUR_HEIGHT - (height || HOUR_HEIGHT / 4); // Use min height if actual height is 0
+      const clampedSnappedVisualY = Math.min(snappedVisualY, maxPossibleTop);
+
+      const snappedOffsetY = clampedSnappedVisualY - originalTop;
+
+      // Update the visual offset
+      offsetY.value = snappedOffsetY;
     })
     .onEnd(() => {
       // Calculate the final visual Y position based on the original prop and the drag offset
