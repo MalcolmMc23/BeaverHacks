@@ -16,6 +16,11 @@ import { Event } from "./AddEventModal";
 interface DayViewProps {
   date: Date;
   dayEvents: Event[];
+  onUpdateEventTime: (
+    eventId: string,
+    newStartTime: Date,
+    newEndTime: Date
+  ) => void;
 }
 
 interface DayViewStyles {
@@ -24,6 +29,7 @@ interface DayViewStyles {
   hourContainer: ViewStyle;
   hourText: TextStyle;
   line: ViewStyle;
+  eventsContainer: ViewStyle;
 }
 
 const HOUR_HEIGHT = 60;
@@ -40,21 +46,39 @@ const calculateEventPosition = (event: Event) => {
     endHour * MINUTES_IN_HOUR +
     endMinute -
     (startHour * MINUTES_IN_HOUR + startMinute);
-  const height = (durationMinutes / MINUTES_IN_HOUR) * HOUR_HEIGHT;
+  let height = (durationMinutes / MINUTES_IN_HOUR) * HOUR_HEIGHT;
 
-  const minHeight = 20;
-  const calculatedHeight = Math.max(height, minHeight);
+  const minDurationMinutes = 15;
+  const minHeight = (minDurationMinutes / MINUTES_IN_HOUR) * HOUR_HEIGHT;
+  height = Math.max(height, minHeight);
 
-  return { top, height: calculatedHeight };
+  const maxTop = 24 * HOUR_HEIGHT - height;
+  const clampedTop = Math.min(top, maxTop);
+
+  return { top: clampedTop, height };
 };
 
-export const DayView: React.FC<DayViewProps> = ({ date, dayEvents }) => {
+export const DayView: React.FC<DayViewProps> = ({
+  date,
+  dayEvents,
+  onUpdateEventTime,
+}) => {
   const colorScheme = useColorScheme() ?? "light";
   const themeColors = colorScheme === "dark" ? Colors.dark : Colors.light;
 
   const handleEventPress = (event: Event) => {
     console.log("Event pressed:", event.id, event.title);
   };
+
+  const handleEventDragEnd = useCallback(
+    (eventId: string, newStartTime: Date, newEndTime: Date) => {
+      console.log(
+        `Event ${eventId} dragged. New Start: ${newStartTime.toLocaleTimeString()}, New End: ${newEndTime.toLocaleTimeString()}`
+      );
+      onUpdateEventTime(eventId, newStartTime, newEndTime);
+    },
+    [onUpdateEventTime]
+  );
 
   const hours = Array.from({ length: 24 }, (_, i) => {
     const hour = i % 12 === 0 ? 12 : i % 12;
@@ -94,6 +118,14 @@ export const DayView: React.FC<DayViewProps> = ({ date, dayEvents }) => {
       height: StyleSheet.hairlineWidth,
       backgroundColor: themeColors.border,
     },
+    eventsContainer: {
+      position: "absolute",
+      top: 0,
+      left: 60,
+      right: 10,
+      bottom: 0,
+      paddingTop: 10,
+    },
   });
 
   return (
@@ -112,7 +144,7 @@ export const DayView: React.FC<DayViewProps> = ({ date, dayEvents }) => {
           <View style={styles.line} />
         </View>
 
-        <View style={StyleSheet.absoluteFill}>
+        <View style={styles.eventsContainer}>
           {dayEvents.map((event) => {
             const { top, height } = calculateEventPosition(event);
             return (
@@ -120,16 +152,11 @@ export const DayView: React.FC<DayViewProps> = ({ date, dayEvents }) => {
                 key={event.id}
                 event={event}
                 onPress={handleEventPress}
+                onDragEnd={handleEventDragEnd}
                 style={{
                   position: "absolute",
-                  top:
-                    top +
-                    (typeof styles.scrollViewContent.paddingTop === "number"
-                      ? styles.scrollViewContent.paddingTop
-                      : 0),
+                  top: top,
                   height: height,
-                  left: 60,
-                  right: 10,
                 }}
               />
             );

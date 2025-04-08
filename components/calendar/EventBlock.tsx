@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback } from "react";
 import {
   View,
   Text,
@@ -7,14 +7,26 @@ import {
   ViewStyle,
   TextStyle,
 } from "react-native";
-import { Event } from "./DayView"; // Assuming Event interface is exported from DayView or moved elsewhere
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  runOnJS,
+} from "react-native-reanimated";
+import { GestureDetector, Gesture } from "react-native-gesture-handler";
+import { Event } from "./AddEventModal"; // Import Event from AddEventModal where it's defined
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { Colors } from "@/constants/Colors";
+
+// Define constants used in DayView for calculations (or import them)
+const HOUR_HEIGHT = 60;
+const MINUTES_IN_HOUR = 60;
 
 interface EventBlockProps {
   event: Event;
   onPress: (event: Event) => void;
-  style?: ViewStyle; // Allow passing positioning styles (top, height)
+  onDragEnd: (eventId: string, newStartTime: Date, newEndTime: Date) => void; // Callback for drag end
+  style?: ViewStyle;
 }
 
 interface EventBlockStyles {
@@ -23,61 +35,159 @@ interface EventBlockStyles {
   eventTimeText: TextStyle;
 }
 
+// Helper to calculate time from Y offset
+const calculateTimeFromY = (y: number, originalDate: Date): Date => {
+  const totalMinutes = (y / HOUR_HEIGHT) * MINUTES_IN_HOUR;
+  const hours = Math.floor(totalMinutes / MINUTES_IN_HOUR);
+  // Round minutes to the nearest minute to avoid floating point issues
+  const minutes = Math.round(totalMinutes % MINUTES_IN_HOUR);
+
+  // Create a new date object based on the original event date but with new time
+  const newDate = new Date(originalDate);
+  // Set hours and minutes, reset seconds and milliseconds
+  newDate.setHours(hours, minutes, 0, 0);
+  return newDate;
+};
+
 export const EventBlock: React.FC<EventBlockProps> = ({
   event,
   onPress,
+  onDragEnd, // Receive the callback
   style,
 }) => {
   const colorScheme = useColorScheme() ?? "light";
   const themeColors = colorScheme === "dark" ? Colors.dark : Colors.light;
   const height = typeof style?.height === "number" ? style.height : 0;
+  const originalTop = typeof style?.top === "number" ? style.top : 0;
+
+  // Shared values for position
+  const offsetY = useSharedValue(0);
+  const startY = useSharedValue(0); // Keep track of start position
+
+  // --- Gesture Handler ---
+  const panGesture = Gesture.Pan()
+    .onBegin(() => {
+      startY.value = offsetY.value; // Store current offset when drag begins
+    })
+    .onUpdate((e) => {
+      // Allow dragging only vertically
+      offsetY.value = startY.value + e.translationY;
+    })
+    .onEnd(() => {
+      // Calculate new position based on final offset
+      // Ensure the top position doesn't go below 0
+      const finalY = Math.max(0, originalTop + offsetY.value);
+
+      // Calculate new start time based on the final Y position
+      const newStartTime = calculateTimeFromY(finalY, event.startTime);
+
+      // Calculate duration in milliseconds
+      const durationMs = event.endTime.getTime() - event.startTime.getTime();
+
+      // Calculate new end time by adding the original duration
+      const newEndTime = new Date(newStartTime.getTime() + durationMs);
+
+      // Clamp new start time to prevent going before 00:00
+      const minTime = new Date(newStartTime);
+      minTime.setHours(0, 0, 0, 0);
+
+      let clampedStartTime = newStartTime;
+      let clampedEndTime = newEndTime;
+
+      if (clampedStartTime.getTime() < minTime.getTime()) {
+        clampedStartTime = minTime;
+        clampedEndTime = new Date(clampedStartTime.getTime() + durationMs);
+      }
+
+      // Prevent end time from exceeding the day boundary (24:00)
+      const dayEndTimeLimit = new Date(newStartTime);
+      dayEndTimeLimit.setHours(24, 0, 0, 0); // Start of next day
+
+      if (clampedEndTime.getTime() >= dayEndTimeLimit.getTime()) {
+        // Adjust end time to be exactly the end of the day (23:59:59.999)
+        clampedEndTime = new Date(dayEndTimeLimit.getTime() - 1);
+        // Adjust start time accordingly to maintain duration
+        clampedStartTime = new Date(clampedEndTime.getTime() - durationMs);
+        // Re-clamp start time if duration pushes it before 00:00
+        if (clampedStartTime.getTime() < minTime.getTime()) {
+          clampedStartTime = minTime;
+          // Recalculate end time if start time was clamped
+          clampedEndTime = new Date(clampedStartTime.getTime() + durationMs);
+          // Ensure end time doesn't exceed 24:00 again
+          if (clampedEndTime.getTime() >= dayEndTimeLimit.getTime()) {
+            clampedEndTime = new Date(dayEndTimeLimit.getTime() - 1);
+          }
+        }
+      }
+
+      // Call the callback on the JS thread
+      runOnJS(onDragEnd)(event.id, clampedStartTime, clampedEndTime);
+
+      // Reset offset visually after state update causes re-render
+      offsetY.value = withSpring(0);
+    })
+    .runOnJS(true); // Ensure onEnd runs on JS thread for state updates
+
+  // Animated style for translation
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateY: offsetY.value }],
+      // Optional: Add visual feedback during drag (e.g., slight scale or shadow)
+      // elevation: offsetY.value !== 0 ? 5 : 1, // Example elevation change
+    };
+  });
+  // --- End Gesture Handler ---
 
   const styles = StyleSheet.create<EventBlockStyles>({
     eventBlock: {
-      // Removed absolute positioning - handled by parent
-      left: 0,
+      // Base styles (keep position absolute from parent's perspective)
+      left: 0, // Keep L/R positioning relative to the DayView's event container
       right: 0,
-      backgroundColor: event.color || themeColors.tint, // Use event's color or default
+      backgroundColor: event.color || themeColors.tint,
       borderRadius: 4,
       padding: 4,
       overflow: "hidden",
       borderWidth: 1,
       borderColor: themeColors.border,
-      // Height is applied via the style prop
+      // Height and Top are applied via the style prop
     },
     eventText: {
       fontSize: 10,
-      color: themeColors.background, // Text color contrasts with background
+      color: themeColors.background,
       fontWeight: "bold",
     },
     eventTimeText: {
       fontSize: 8,
-      color: themeColors.background, // Adjust if needed for better contrast on event color
-      opacity: 0.8, // Slightly less prominent
+      color: themeColors.background,
+      opacity: 0.8,
     },
   });
 
   return (
-    <TouchableOpacity
-      style={[styles.eventBlock, style]} // Combine base styles with passed position styles
-      onPress={() => onPress(event)}
-      activeOpacity={0.7} // Provide visual feedback on press
-    >
-      <Text style={styles.eventText} numberOfLines={1}>
-        {event.title}
-      </Text>
-      {/* Optional: Add start/end times if height allows */}
-      {height > 30 && (
-        <Text style={styles.eventTimeText}>
-          {`${event.startTime.toLocaleTimeString([], {
-            hour: "numeric",
-            minute: "2-digit",
-          })} - ${event.endTime.toLocaleTimeString([], {
-            hour: "numeric",
-            minute: "2-digit",
-          })}`}
-        </Text>
-      )}
-    </TouchableOpacity>
+    <GestureDetector gesture={panGesture}>
+      <Animated.View style={[styles.eventBlock, style, animatedStyle]}>
+        {/* Use TouchableOpacity for press handling, but gesture handles drag */}
+        <TouchableOpacity
+          onPress={() => onPress(event)}
+          activeOpacity={0.7}
+          style={{ flex: 1 }} // Make sure touchable area fills the block
+        >
+          <Text style={styles.eventText} numberOfLines={1}>
+            {event.title}
+          </Text>
+          {height > 30 && (
+            <Text style={styles.eventTimeText}>
+              {`${event.startTime.toLocaleTimeString([], {
+                hour: "numeric",
+                minute: "2-digit",
+              })} - ${event.endTime.toLocaleTimeString([], {
+                hour: "numeric",
+                minute: "2-digit",
+              })}`}
+            </Text>
+          )}
+        </TouchableOpacity>
+      </Animated.View>
+    </GestureDetector>
   );
 };
