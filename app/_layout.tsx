@@ -157,7 +157,7 @@ export default function RootLayout() {
     };
 
     // Uncomment the line below to reset onboarding each time the app loads
-    // resetOnboardingForTesting();
+    resetOnboardingForTesting();
   }, []);
 
   // Safety fallback - render minimal UI instead of null
