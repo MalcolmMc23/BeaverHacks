@@ -94,10 +94,9 @@ export const DayView: React.FC<DayViewProps> = ({
       flexDirection: "row",
     },
     scrollViewContent: {
-      paddingTop: 10,
       paddingBottom: 10,
       position: "relative",
-      minHeight: 24 * HOUR_HEIGHT + 20,
+      minHeight: 24 * HOUR_HEIGHT + 10,
     },
     hourContainer: {
       height: HOUR_HEIGHT,
@@ -124,7 +123,6 @@ export const DayView: React.FC<DayViewProps> = ({
       left: 60,
       right: 10,
       bottom: 0,
-      paddingTop: 10,
     },
   });
 
