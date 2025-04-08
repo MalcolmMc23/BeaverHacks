@@ -1,31 +1,17 @@
 import React, { useState } from "react";
 import {
-  View,
-  Text,
   StyleSheet,
   TouchableOpacity,
   ViewStyle,
   TextStyle,
 } from "react-native";
-import { useColorScheme } from "@/hooks/useColorScheme";
-import { Colors } from "@/constants/Colors";
+import { useThemeColor } from "@/hooks/useThemeColor";
+import { ThemedView } from "@/components/ThemedView";
+import { ThemedText } from "@/components/ThemedText";
 
 interface MonthViewProps {
   onDayPress?: (date: Date) => void; // Optional handler for when a day is pressed
   // Add other props as needed, e.g., initialDate
-}
-
-interface Styles {
-  container: ViewStyle;
-  header: ViewStyle;
-  headerText: TextStyle;
-  weekDaysContainer: ViewStyle;
-  weekDayText: TextStyle;
-  daysGrid: ViewStyle;
-  dayCell: ViewStyle;
-  dayText: TextStyle;
-  emptyCell: ViewStyle;
-  // Add more styles as needed
 }
 
 // Helper function to get days in a month (simplified for now)
@@ -58,17 +44,30 @@ const getMonthName = (monthIndex: number): string => {
   return monthNames[monthIndex];
 };
 
-export const MonthView: React.FC<MonthViewProps> = ({ onDayPress }) => {
-  const colorScheme = useColorScheme() ?? "light";
-  const themeColors = colorScheme === "dark" ? Colors.dark : Colors.light;
-  const [currentDate, setCurrentDate] = useState(new Date()); // Default to current date
+// Function to check if two dates are the same day
+const isSameDay = (date1: Date, date2: Date): boolean => {
+  return (
+    date1.getFullYear() === date2.getFullYear() &&
+    date1.getMonth() === date2.getMonth() &&
+    date1.getDate() === date2.getDate()
+  );
+};
 
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth(); // 0-indexed
+export const MonthView: React.FC<MonthViewProps> = ({ onDayPress }) => {
+  const tintColor = useThemeColor({}, "tint");
+  const backgroundColor = useThemeColor({}, "background"); // For current day text color inversion
+  const textColor = useThemeColor({}, "text");
+  const borderColor = useThemeColor({}, "border");
+
+  const [currentDisplayDate, setCurrentDisplayDate] = useState(new Date()); // Renamed for clarity
+  const today = new Date(); // Get today's date for highlighting
+
+  const year = currentDisplayDate.getFullYear();
+  const month = currentDisplayDate.getMonth(); // 0-indexed
 
   const daysInMonth = getDaysInMonth(year, month);
   const firstDayOfMonth = new Date(year, month, 1).getDay(); // 0 = Sunday, 1 = Monday, etc.
-  const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const weekDayLetters = ["S", "M", "T", "W", "T", "F", "S"]; // Single letters
 
   // Create empty cells for days before the 1st of the month
   const emptyCells = Array(firstDayOfMonth).fill(null);
@@ -82,119 +81,188 @@ export const MonthView: React.FC<MonthViewProps> = ({ onDayPress }) => {
     }
   };
 
-  // --- Dummy Navigation Handlers (Implement actual logic later) ---
   const goToPreviousMonth = () => {
-    setCurrentDate(new Date(year, month - 1, 1));
+    setCurrentDisplayDate(new Date(year, month - 1, 1));
     console.log("Go to previous month");
   };
 
   const goToNextMonth = () => {
-    setCurrentDate(new Date(year, month + 1, 1));
+    setCurrentDisplayDate(new Date(year, month + 1, 1));
     console.log("Go to next month");
   };
-  // --- End Dummy Navigation Handlers ---
 
-  const styles = StyleSheet.create<Styles>({
+  const styles = StyleSheet.create({
     container: {
       flex: 1,
-      padding: 10,
-      backgroundColor: themeColors.background,
+      paddingHorizontal: 15,
+      paddingTop: 10,
     },
-    header: {
+    monthHeader: {
       flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
+      alignItems: "baseline",
+      justifyContent: "center",
       marginBottom: 15,
-      paddingHorizontal: 10,
+      position: "relative",
     },
-    headerText: {
-      fontSize: 18,
+    monthText: {
+      fontSize: 28,
       fontWeight: "bold",
-      color: themeColors.text,
+      marginRight: 8,
+    },
+    yearTextInline: {
+      fontSize: 26,
+      fontWeight: "600",
+      opacity: 0.9,
+    },
+    monthNavButton: {
+      position: "absolute",
+      top: 0,
+      bottom: 0,
+      justifyContent: "center",
+      paddingHorizontal: 15,
+      zIndex: 1,
     },
     weekDaysContainer: {
       flexDirection: "row",
       justifyContent: "space-around",
-      marginBottom: 5,
+      marginBottom: 8, // Adjusted spacing
       borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: themeColors.border,
-      paddingBottom: 5,
+      paddingBottom: 8,
+      borderColor: borderColor, // Use themed border color
     },
     weekDayText: {
-      fontSize: 12,
-      color: themeColors.text,
-      fontWeight: "500",
-      width: "14%", // Ensure equal spacing
+      fontSize: 12, // Slightly smaller for single letters
+      fontWeight: "500", // Medium weight
+      width: "14%",
       textAlign: "center",
+      color: textColor, // Use standard text color
+      opacity: 0.6, // Apply opacity for subtle effect
     },
     daysGrid: {
       flexDirection: "row",
       flexWrap: "wrap",
-      justifyContent: "flex-start", // Start days from the left
+      justifyContent: "flex-start",
     },
-    dayCell: {
-      width: "14%", // 7 days a week
-      aspectRatio: 1, // Make cells square-ish
-      justifyContent: "center",
+    dayCellTouchable: {
+      width: "14.28%", // More precise width for 7 columns
+      aspectRatio: 0.9, // Make cells slightly taller than wide
+      justifyContent: "flex-start", // Align content top
       alignItems: "center",
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: themeColors.border, // Subtle border
+      paddingTop: 5, // Padding for the number
+      // Remove border here, apply to inner view if needed
     },
-    emptyCell: {
-      width: "14%",
-      aspectRatio: 1,
-      backgroundColor: themeColors.border, // Use border color for empty cells
+    dayCellView: {
+      // Inner view for content and potential background/border
+      width: "100%",
+      height: "100%",
+      alignItems: "center",
     },
     dayText: {
-      fontSize: 14,
-      color: themeColors.text,
+      fontSize: 15, // Slightly larger day number
+      marginBottom: 3, // Space for event indicators
     },
-    // Add styles for navigation buttons if needed
+    todayIndicator: {
+      // Style for the current day background
+      width: 28, // Size of the circle
+      height: 28,
+      borderRadius: 14, // Make it a circle
+      justifyContent: "center",
+      alignItems: "center",
+      position: "absolute", // Position behind the text
+      top: 3, // Adjust position slightly
+    },
+    todayText: {
+      // Style for text on the current day (inverted color)
+      fontSize: 15,
+      fontWeight: "bold", // Make today's number bold
+      color: backgroundColor, // Use background color for text
+    },
+    eventIndicatorPlaceholder: {
+      // Placeholder for dots/bars
+      height: 4,
+      width: "60%",
+      borderRadius: 2,
+      backgroundColor: borderColor, // Use border color as placeholder
+      opacity: 0.5,
+      marginTop: 2, // Space below number
+    },
+    emptyCell: {
+      width: "14.28%",
+      aspectRatio: 0.9,
+      // Keep empty cells visually blank or with a subtle background
+    },
+    navText: {
+      fontSize: 20, // Slightly larger nav arrows
+      fontWeight: "bold",
+    },
   });
 
   return (
-    <View style={styles.container}>
-      {/* Header with Month Name and Navigation */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={goToPreviousMonth}>
-          <Text style={{ color: themeColors.tint }}>{"< "}</Text>
-          {/* Basic navigation */}
+    <ThemedView style={styles.container}>
+      {/* Month Header with Inline Year */}
+      <ThemedView style={styles.monthHeader}>
+        <TouchableOpacity
+          onPress={goToPreviousMonth}
+          style={[styles.monthNavButton, { left: 0 }]}
+        >
+          <ThemedText style={[styles.navText, { color: tintColor }]}>
+            {"‹"}
+          </ThemedText>
         </TouchableOpacity>
-        <Text style={styles.headerText}>{`${getMonthName(
-          month
-        )} ${year}`}</Text>
-        <TouchableOpacity onPress={goToNextMonth}>
-          <Text style={{ color: themeColors.tint }}>{" >"}</Text>
-          {/* Basic navigation */}
+        <ThemedText style={styles.monthText}>{getMonthName(month)}</ThemedText>
+        <ThemedText style={styles.yearTextInline}>{year}</ThemedText>
+        <TouchableOpacity
+          onPress={goToNextMonth}
+          style={[styles.monthNavButton, { right: 0 }]}
+        >
+          <ThemedText style={[styles.navText, { color: tintColor }]}>
+            {"›"}
+          </ThemedText>
         </TouchableOpacity>
-      </View>
+      </ThemedView>
 
-      {/* Week Day Headers */}
-      <View style={styles.weekDaysContainer}>
-        {weekDays.map((day) => (
-          <Text key={day} style={styles.weekDayText}>
-            {day}
-          </Text>
+      {/* Week Day Letters */}
+      <ThemedView style={styles.weekDaysContainer}>
+        {weekDayLetters.map((letter, index) => (
+          <ThemedText key={index} style={styles.weekDayText}>
+            {letter}
+          </ThemedText>
         ))}
-      </View>
+      </ThemedView>
 
       {/* Days Grid */}
-      <View style={styles.daysGrid}>
-        {allCells.map((day, index) =>
-          day ? (
+      <ThemedView style={styles.daysGrid}>
+        {allCells.map((day, index) => {
+          const isCurrentDay = day ? isSameDay(day, today) : false;
+          return day ? (
             <TouchableOpacity
-              key={day.toISOString()} // Use ISO string for unique key
-              style={styles.dayCell}
+              key={day.toISOString()}
+              style={styles.dayCellTouchable}
               onPress={() => handleDayClick(day)}
             >
-              <Text style={styles.dayText}>{day.getDate()}</Text>
-              {/* TODO: Add indicators for events later */}
+              <ThemedView style={styles.dayCellView}>
+                {isCurrentDay && (
+                  <ThemedView
+                    style={[
+                      styles.todayIndicator,
+                      { backgroundColor: tintColor },
+                    ]}
+                  />
+                )}
+                <ThemedText
+                  style={isCurrentDay ? styles.todayText : styles.dayText}
+                >
+                  {day.getDate()}
+                </ThemedText>
+                {/* Placeholder for event indicators */}
+                <ThemedView style={styles.eventIndicatorPlaceholder} />
+              </ThemedView>
             </TouchableOpacity>
           ) : (
-            <View key={`empty-${index}`} style={styles.emptyCell} />
-          )
-        )}
-      </View>
-    </View>
+            <ThemedView key={`empty-${index}`} style={styles.emptyCell} />
+          );
+        })}
+      </ThemedView>
+    </ThemedView>
   );
 };
