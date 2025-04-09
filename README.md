@@ -1,50 +1,37 @@
-# Welcome to your Expo app 👋
+# 📆 FocusFlow – AI Calendar & To-Do List with Lock Mode
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+**FocusFlow** is a React Native iOS app that combines AI scheduling, productivity tracking, and distraction blocking into a smart, adaptive calendar. Designed for students and productivity lovers, it helps you manage your time based on your personal rhythm and stay focused by locking distracting apps when it’s time to work.
 
-## Get started
+## 🧠 Key Features
 
-1. Install dependencies
+- ✅ **AI-Powered Scheduling**  
+  Add tasks to your to-do list and let the AI place them intelligently into your calendar based on your productivity curve.
+
+- 🔒 **Lock Mode**  
+  Automatically locks apps like Instagram, Snapchat, and TikTok during focused work or study sessions.
+
+- 📅 **Calendar with Smart To-Do Integration**  
+  Your to-dos show up in the calendar based on your energy levels and preferred workflow times.
+
+- 🔁 **Adaptive Rescheduling**  
+  Tasks that are incomplete will be automatically rescheduled. The app learns your patterns over time.
+
+- 📊 **Track & Reflect**  
+  Rate how tasks went. Use your feedback to optimize future scheduling and understand your personal rhythm.
+
+## 📲 Built With
+
+- **React Native** – Cross-platform mobile development
+- **Expo** – Simplified build and deployment
+- **TypeScript** – Type-safe codebase
+- **Firebase / Supabase / Express + PostgreSQL** – (Optional) for user auth, data storage
+- **Local Notifications & App Locking APIs** – For reminders and blocking distractions
+
+## 🚀 Getting Started
+
+1. Clone the repo:
 
    ```bash
-   npm install
+   git clone https://github.com/yourusername/focusflow.git
+   cd focusflow
    ```
-
-2. Start the app
-
-   ```bash
-    npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
