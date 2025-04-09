@@ -11,6 +11,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 import "react-native-get-random-values";
+import type { Window } from '@types/web';
+
+declare const window: Window;
 
 import { Colors } from "@/constants/Colors";
 import { Onboarding } from "@/components/Onboarding";
@@ -28,19 +31,19 @@ function ErrorBoundary({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (Platform.OS === "web") {
-      const handleError = (error: ErrorEvent) => {
-        console.error("Caught error:", error);
+      const handleError = (e: any) => {
+        console.error("Caught error:", e);
         setHasError(true);
-        setError(error.error || error);
+        setError(e.error || e);
       };
 
-      // Only use window listeners on web
-      window.addEventListener("error", handleError);
-      return () => window.removeEventListener("error", handleError);
+      // @ts-ignore -- window exists on web
+      globalThis.addEventListener?.("error", handleError);
+      return () => {
+        // @ts-ignore -- window exists on web
+        globalThis.removeEventListener?.("error", handleError);
+      };
     }
-
-    // For native, we could use AppState or other error handling approaches
-    // But this is a basic implementation for now
     return undefined;
   }, []);
 
